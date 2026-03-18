@@ -97,6 +97,71 @@ def members():
     all_members = Member.query.all()
     return render_template('members.html', members=all_members)
 
+@app.route('/members/add', methods=['POST'])
+@login_required
+def add_member():
+    name = request.form.get('name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    membership_plan = request.form.get('membership_plan')
+    goal = request.form.get('goal')
+    status = request.form.get('status')
+    password = request.form.get('password')
+
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+      flash('A user with this eamil already exists.', 'danger')
+      return redirect(url_for('members'))
+
+    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+    new_user  = User(username=name, email=email, password_hash=hashed_pw, role='member')
+    db.session.add(new_user)
+    db.session.flush()
+
+# Create meber profile
+    new_member = Member(
+    user_id = new_user.id,
+    name    = name,
+    email   = email,
+    phone   = phone,
+    membership_plan = membership_plan,
+    goal = goal,
+    status = status
+)
+    db.session.add(new_member)
+    db.session.commit()
+    flash(f'Member {name} added successfully', 'success')
+    return redirect(url_for('members'))
+
+@app.route('/members/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_member(id):
+    member = Member.query.get_or_404(id)
+    if request.method == 'POST':
+        member.name            = request.form.get('name')
+        member.email           = request.form.get('email')
+        member.phone           = request.form.get('phone')
+        member.membership_plan = request.form.get('membership_plan')
+        member.goal            = request.form.get('goal')
+        member.status          = request.form.get('status')
+        db.session.commit()
+        flash('Member updated successfully!', 'success')
+        return redirect(url_for('members'))
+    return render_template('edit_member.html', member=member)
+
+@app.route('/members/delete/<int:id>')
+@login_required
+def delete_member(id):
+    member = Member.query.get_or_404(id)
+    user   = User.query.get(member.user_id)
+    db.session.delete(member)
+    if user:
+        db.session.delete(user)
+    db.session.commit()
+    flash('Member deleted successfully!', 'success')
+    return redirect(url_for('members'))
+
+
 # Trainers page
 @app.route('/trainers')
 @login_required
