@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Workout - Gym Management System{% endblock %}
+
+{% block content %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Edit Workout</h1>
+    <a href="{{ url_for('workouts') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Workouts
+    </a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Edit Workout Details</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('edit_workout', id=workout.id) }}">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Workout Name</label>
+                        <input type="text" class="form-control" name="name"
+                            value="{{ workout.name }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Workout Type</label>
+                        <select class="form-control" name="type">
+                            <option value="HIIT" {% if workout.type == 'HIIT' %}selected{% endif %}>HIIT</option>
+                            <option value="Strength" {% if workout.type == 'Strength' %}selected{% endif %}>Strength</option>
+                            <option value="Cardio" {% if workout.type == 'Cardio' %}selected{% endif %}>Cardio</option>
+                            <option value="Flexibility" {% if workout.type == 'Flexibility' %}selected{% endif %}>Flexibility</option>
+                            <option value="General" {% if workout.type == 'General' %}selected{% endif %}>General</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Duration (minutes)</label>
+                        <input type="number" class="form-control" name="duration"
+                            value="{{ workout.duration }}" min="1" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Difficulty</label>
+                        <select class="form-control" name="difficulty">
+                            <option value="Beginner" {% if workout.difficulty == 'Beginner' %}selected{% endif %}>Beginner</option>
+                            <option value="Intermediate" {% if workout.difficulty == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+                            <option value="Advanced" {% if workout.difficulty == 'Advanced' %}selected{% endif %}>Advanced</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Assign Trainer</label>
+                        <select class="form-control" name="trainer_id">
+                            {% for trainer in trainers %}
+                            <option value="{{ trainer.id }}"
+                                {% if workout.trainer_id == trainer.id %}selected{% endif %}>
+                                {{ trainer.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea class="form-control" name="description"
+                            rows="3">{{ workout.description }}</textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save mr-1"></i> Update Workout
+            </button>
+            <a href="{{ url_for('workouts') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

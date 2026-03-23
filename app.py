@@ -234,14 +234,112 @@ def delete_trainer(id):
 @login_required
 def workouts():
     all_workouts = Workout.query.all()
-    return render_template('workouts.html', workouts=all_workouts)
+    all_trainers = Trainer.query.all()
+    return render_template('workouts.html', workouts=all_workouts, trainers=all_trainers)
+
+@app.route('/workouts/add', methods=['POST'])
+@login_required
+def add_workout():
+    name = request.form.get('name')
+    type = request.form.get('type')
+    duration = request.form.get('duration')
+    difficulty = request.form.get('difficulty')
+    trainer_id = request.form.get('trainer_id')
+    description = request.form.get('description')
+
+    new_workout = Workout(
+        name = name,
+        type = type,
+        duration = int(duration),
+        difficulty = difficulty,
+        trainer_id = int(trainer_id),
+        description = description
+    )
+    db.session.add(new_workout)
+    db.session.commit()
+    flash(f'Workout {name} added successfully!', 'success')
+    return redirect(url_for('workouts'))
+
+@app.route('/workouts/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_workout(id):
+    workout = Workout.query.get_or_404(id)
+    all_trainers = Trainer.query.all()
+    if request.method == 'POST':
+        workout.name        = request.form.get('name')
+        workout.type        = request.form.get('type')
+        workout.duration    = int(request.form.get('duration'))
+        workout.difficulty  = request.form.get('difficulty')
+        workout.trainer_id  = int(request.form.get('trainer_id'))
+        workout.description = request.form.get('description')
+        db.session.commit()
+        flash('Workout updated successfully!', 'success')
+        return redirect(url_for('workouts'))
+    return render_template('edit_workout.html', workout=workout, trainers=all_trainers)
+
+@app.route('/workouts/delete/<int:id>')
+@login_required
+def delete_workout(id):
+    workout = Workout.query.get_or_404(id)
+    db.session.delete(workout)
+    db.session.commit()
+    flash('Workout deleted successfully!', 'success')
+    return redirect(url_for('workouts'))
 
 # Nutrition page
 @app.route('/nutrition')
 @login_required
 def nutrition():
     all_nutrition = Nutrition.query.all()
-    return render_template('nutrition.html', nutrition=all_nutrition)
+    all_members = Member.query.all()
+    return render_template('nutrition.html', nutrition=all_nutrition, members=all_members)
+
+@app.route('/nutrition/add', methods=['POST'])
+@login_required
+def add_nutrition():
+    member_id = request.form.get('memeber_id')
+    meal_plan = request.form.get('meal_plan')
+    calories = request.form.get('calories')
+    protein = request.form.get('protein')
+    schedule = request.form.get('schedule')
+
+    new_plan = Nutrition(
+        member_id = int(member_id),
+        meal_plan = meal_plan,
+        calories = int(calories),
+        protein = int(protein),
+        schedule = schedule
+    )
+    db.session.add(new_plan)
+    db.session.commit()
+    flash('Meal plan added successfullly!', 'success')
+    return redirect(url_for('nutrition'))
+
+@app.route('/nutrition/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_nutrition(id):
+    plan = Nutrition.query.get_or_404(id)
+    all_members = Member.query.all()
+    if request.method == 'POST':
+        plan.member_id = int(request.form.get('member_id'))
+        plan.meal_plan = request.form.get('meal_plan')
+        plan.calories  = int(request.form.get('calories'))
+        plan.protein   = int(request.form.get('protein'))
+        plan.schedule  = request.form.get('schedule')
+        db.session.commit()
+        flash('Meal plan updated successfully!', 'success')
+        return redirect(url_for('nutrition'))
+    return render_template('edit_nutrition.html', plan=plan, members=all_members)
+
+@app.route('/nutrition/delete/<int:id>')
+@login_required
+def delete_nutrition(id):
+    plan = Nutrition.query.get_or_404(id)
+    db.session.delete(plan)
+    db.session.commit()
+    flash('Meal plan deleted successfully!', 'success')
+    return redirect(url_for('nutrition'))
+
 
 # Attendance page
 @app.route('/attendance')

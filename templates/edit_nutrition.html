@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Meal Plan - Gym Management System{% endblock %}
+
+{% block content %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Edit Meal Plan</h1>
+    <a href="{{ url_for('nutrition') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Nutrition
+    </a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Edit Meal Plan Details</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('edit_nutrition', id=plan.id) }}">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Member</label>
+                        <select class="form-control" name="member_id">
+                            {% for member in members %}
+                            <option value="{{ member.id }}"
+                                {% if plan.member_id == member.id %}selected{% endif %}>
+                                {{ member.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Meal Plan</label>
+                        <select class="form-control" name="meal_plan">
+                            <option value="Weight Loss Plan" {% if plan.meal_plan == 'Weight Loss Plan' %}selected{% endif %}>Weight Loss Plan</option>
+                            <option value="Muscle Gain Plan" {% if plan.meal_plan == 'Muscle Gain Plan' %}selected{% endif %}>Muscle Gain Plan</option>
+                            <option value="Maintenance Plan" {% if plan.meal_plan == 'Maintenance Plan' %}selected{% endif %}>Maintenance Plan</option>
+                            <option value="High Protein Plan" {% if plan.meal_plan == 'High Protein Plan' %}selected{% endif %}>High Protein Plan</option>
+                            <option value="Low Carb Plan" {% if plan.meal_plan == 'Low Carb Plan' %}selected{% endif %}>Low Carb Plan</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Daily Calories (kcal)</label>
+                        <input type="number" class="form-control" name="calories"
+                            value="{{ plan.calories }}" min="0" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Daily Protein (grams)</label>
+                        <input type="number" class="form-control" name="protein"
+                            value="{{ plan.protein }}" min="0" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>Meal Schedule</label>
+                        <textarea class="form-control" name="schedule"
+                            rows="3">{{ plan.schedule }}</textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save mr-1"></i> Update Meal Plan
+            </button>
+            <a href="{{ url_for('nutrition') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
