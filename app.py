@@ -169,6 +169,66 @@ def trainers():
     all_trainers = Trainer.query.all()
     return render_template('trainers.html', trainers=all_trainers)
 
+@app.route('/trainers/add', methods=['POST'])
+@login_required
+def add_trainer():
+    name = request.form.get('name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    specialization = request.form.get('specialization')
+    bio = request.form.get('bio')
+    password = request.form.get('password')
+
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        flash('A user with this email already exists.', 'danger')
+        return redirect(url_for('trainers'))
+    
+    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+    new_user  = User(username=name, email=email, password_hash=hashed_pw, role='trainer')
+    db.session.add(new_user)
+    db.session.flush()
+
+    new_trainer = Trainer(
+        user_id        = new_user.id,
+        name           = name,
+        email          = email,
+        phone          = phone,
+        specialization = specialization,
+        bio            = bio
+    )
+    db.session.add(new_trainer)
+    db.session.commit()
+    flash(f'Trainer {name} added successfully!', 'success')
+    return redirect(url_for('trainers'))
+
+@app.route('/trainers/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_trainer(id):
+    trainer = Trainer.query.get_or_404(id)
+    if request.method == 'POST':
+        trainer.name = request.form.get('name')
+        trainer.email = request.form.get('email')
+        trainer.phone = request.form.get('phone')
+        trainer.specialization = request.form.get('specialization')
+        trainer.bio = request.form.get('bio')
+        db.session.commit()
+        flash('Trainer updated successfully!', 'success')
+        return redirect(url_for('trainers'))
+    return render_template('edit_trainer.html', trainer=trainer)
+
+@app.route('/trainers/delete/<int:id>')
+@login_required
+def delete_trainer(id):
+    trainer = Trainer.query.get_or_404(id)
+    user    = User.query.get(trainer.user_id)
+    db.session.delete(trainer)
+    if user:
+        db.session.delete(user)
+    db.session.commit()
+    flash('Trainer deleted successfully!', 'success')
+    return redirect(url_for('trainers'))
+
 # Workouts page
 @app.route('/workouts')
 @login_required

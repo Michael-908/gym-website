@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Trainer - Gym Management System{% endblock %}
+
+{% block content %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Edit Trainer</h1>
+    <a href="{{ url_for('trainers') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Trainers
+    </a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Edit Trainer Details</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('edit_trainer', id=trainer.id) }}">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" class="form-control" name="name" value="{{ trainer.name }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" class="form-control" name="email" value="{{ trainer.email }}" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" class="form-control" name="phone" value="{{ trainer.phone }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Specialization</label>
+                        <select class="form-control" name="specialization">
+                            <option value="HIIT" {% if trainer.specialization == 'HIIT' %}selected{% endif %}>HIIT</option>
+                            <option value="Strength Training" {% if trainer.specialization == 'Strength Training' %}selected{% endif %}>Strength Training</option>
+                            <option value="Cardio" {% if trainer.specialization == 'Cardio' %}selected{% endif %}>Cardio</option>
+                            <option value="Yoga" {% if trainer.specialization == 'Yoga' %}selected{% endif %}>Yoga</option>
+                            <option value="Nutrition" {% if trainer.specialization == 'Nutrition' %}selected{% endif %}>Nutrition</option>
+                            <option value="General Fitness" {% if trainer.specialization == 'General Fitness' %}selected{% endif %}>General Fitness</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea class="form-control" name="bio" rows="3">{{ trainer.bio }}</textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save mr-1"></i> Update Trainer
+            </button>
+            <a href="{{ url_for('trainers') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
