@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance - Gym Management System{% endblock %}
+
+{% block content %}
+
+<!-- Page Heading -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Attendance</h1>
+    <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#checkInModal">
+        <i class="fas fa-calendar-check fa-sm text-white-50"></i> Check In Member
+    </button>
+</div>
+
+<!-- Stats Row -->
+<div class="row">
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Today's Attendance</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ today_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Currently Checked In</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ checked_in_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Records</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Attendance Records</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Member</th>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ record.member.name if record.member else 'N/A' }}</td>
+                        <td>{{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}</td>
+                        <td>{{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}</td>
+                        <td>{{ record.check_out.strftime('%I:%M %p') if record.check_out else '—' }}</td>
+                        <td>
+                            {% if record.check_out %}
+                                <span class="badge badge-secondary">Checked Out</span>
+                            {% else %}
+                                <span class="badge badge-success">Present</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not record.check_out %}
+                            <a href="{{ url_for('check_out', id=record.id) }}"
+                                class="btn btn-info btn-sm">
+                                <i class="fas fa-sign-out-alt"></i> Check Out
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('delete_attendance', id=record.id) }}"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm('Delete this attendance record?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-gray-500">No attendance records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Check In Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-check mr-2"></i>Check In Member</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('check_in') }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Select Member <span class="text-danger">*</span></label>
+                        <select class="form-control" name="member_id" required>
+                            <option value="">Select Member</option>
+                            {% for member in members %}
+                            <option value="{{ member.id }}">{{ member.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check mr-1"></i> Check In
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -345,15 +345,117 @@ def delete_nutrition(id):
 @app.route('/attendance')
 @login_required
 def attendance():
-    all_attendance = Attendance.query.all()
-    return render_template('attendance.html', attendance=all_attendance)
+    from datetime import date
+    all_attendance = Attendance.query.order_by(Attendance.check_in.desc()).all()
+    all_members = Member.query.all()
+    today = date.today()
+    today_count = Attendance.query.filter_by(date=today).count()
+    checked_in_count = Attendance.query.filter_by(date=today, check_out=None).count()
+    total_count = Attendance.query.count()
+    return render_template('attendance.html', attendance=all_attendance,
+                           members=all_members,
+                           today_count=today_count,
+                           checked_in_count=checked_in_count,
+                           total_count=total_count)
+
+@app.route('/attendance/checkin', methods=['POST'])
+@login_required
+def check_in():
+    from datetime import datetime, date
+    member_id = request.form.get('member_id')
+
+    # Check if member is already checked in today
+    today           = date.today()
+    existing        = Attendance.query.filter_by(
+                        member_id=int(member_id),
+                        date=today,
+                        check_out=None).first()
+    if existing:
+        flash('Member is already checked in today!', 'warning')
+        return redirect(url_for('attendance'))
+
+    new_record = Attendance(
+        member_id = int(member_id),
+        check_in  = datetime.now(),
+        date      = today
+    )
+    db.session.add(new_record)
+    db.session.commit()
+    flash('Member checked in successfully!', 'success')
+    return redirect(url_for('attendance'))
+
+@app.route('/attendance/checkout/<int:id>')
+@login_required
+def check_out(id):
+    from datetime import datetime
+    record = Attendance.query.get_or_404(id)
+    record.check_out = datetime.now()
+    db.session.commit()
+    flash('Member checked out successfully!', 'success')
+    return redirect(url_for('attendance'))
+
+@app.route('/attendance/delete/<int:id>')
+@login_required
+def delete_attendance(id):
+    record = Attendance.query.get_or_404(id)
+    db.session.delete(record)
+    db.session.commit()
+    flash('Attendance record deleted successfully!', 'success')
+    return redirect(url_for('attendance'))
 
 # Payments page
 @app.route('/payments')
 @login_required
 def payments():
-    all_payments = Payment.query.all()
-    return render_template('payments.html', payments=all_payments)
+    from datetime import date
+    from calendar import monthrange
+    all_payments = Payment.query.order_by(Payment.payment_date.desc()).all()
+    all_members = Member.query.all()
+    total_revenue = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
+    total_payments = Payment.query.count()
+    today = date.today()
+    month_end = date(today.year, today.month,
+                     monthrange(today.year, today.month)[1])
+    expiring_count = Payment.query.filter(
+                     Payment.expiry_date <= month_end,
+                     Payment.expiry_date >= today).count()
+    
+    return render_template('payments.html',
+                           payment=all_payments,
+                           members=all_members,
+                           total_revenue=total_revenue,
+                           total_payments=total_payments,
+                           expiring_count=expiring_count)
+
+@app.route('/payment/add', methods=['POST'])
+@login_required
+def add_payment():
+    from datetime import datetime
+    member_id   = request.form.get('member_id')
+    amount      = request.form.get('amount')
+    method      = request.form.get('method')
+    expiry_date = request.form.get('expiry_date')
+
+    new_payment = Payment(
+        member_id   = int(member_id),
+        amount      = float(amount),
+        method      = method,
+        expiry_date = datetime.strptime(expiry_date, '%Y-%m-%d').date(),
+        status      = 'completed'
+    )
+    db.session.add(new_payment)
+    db.session.commit()
+    flash('Payment recorded successfully!', 'success')
+    return redirect(url_for('payments'))
+
+@app.route('/payments/delete/<int:id>')
+@login_required
+def delete_payment(id):
+    payment = Payment.query.get_or_404(id)
+    db.session.delete(payment)
+    db.session.commit()
+    flash('Payment deleted successfully!', 'success')
+    return redirect(url_for('payments'))
 
 # Reports page
 @app.route('/reports')
@@ -365,8 +467,43 @@ def reports():
 @app.route('/progress')
 @login_required
 def progress():
-    all_progress = Progress.query.all()
-    return render_template('progress.html', progress=all_progress)
+    all_progress = Progress.query.order_by(Progress.date.desc()).all()
+    all_members = Member.query.all()
+    return render_template('progress.html', progress=all_progress, members=all_members)
+
+@app.route('/progress/add', methods=['POST'])
+@login_required
+def add_progress():
+    member_id = request.form.get('member_id')
+    weight = request.form.get('weight')
+    height = request.form.get('height')
+    strength_score = request.form.get('strength_score')
+
+    # Calculate BMI  automatically
+    bmi = None
+    if weight and height:
+        height_m = float(height) / 100
+        bmi = round(float(weight)/ (height_m ** 2), 2)
+
+    new_record = Progress(
+        member_id = int(member_id),
+        weight = float(weight),
+        bmi = bmi,
+        strength_score = float(strength_score) if strength_score else None
+    )
+    db.session.add(new_record)
+    db.session.commit()
+    flash('Progress record added succesfully!', 'success')
+    return redirect(url_for('progress'))
+
+@app.route('/progress/delete/<int:id>')
+@login_required
+def delete_progress(id):
+    record = Progress.query.get_or_404(id)
+    db.session.delete(record)
+    db.session.commit()
+    flash('Progress record deleted successfully!', 'success')
+    return redirect(url_for('progress'))
 
 # Classes page
 @app.route('/classes')
