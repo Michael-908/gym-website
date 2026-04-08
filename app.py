@@ -1,10 +1,17 @@
 from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
-from models import db, User, Member, Trainer, Workout, Nutrition, Attendance, Payment, Progress, Class, ClassBooking
+from flask_mail import Mail, Message
+from models import db, User, Member, Trainer, Workout, Nutrition, Attendance, Payment, Progress, Class, ClassBooking, MembershipPlan
+from dotenv import load_dotenv
 import os
+import stripe
+import requests
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
+
+load_dotenv()
 
 #Configuration
 app.config['SECRET_KEY'] = 'gymapp-secret-key-2026'
@@ -15,9 +22,47 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['REMEMBER_COOKIE_DURATION'] = 3600
 
+# Payment Configuration
+# Force the app to use the environment variable only
+app.config['STRIPE_PUBLIC_KEY'] = os.getenv('STRIPE_PUBLIC_KEY')
+app.config['STRIPE_SECRET_KEY'] = os.getenv('STRIPE_SECRET_KEY')
+
+# Verify the key is loaded before proceeding
+if not app.config['STRIPE_SECRET_KEY'] or 'your_stripe' in app.config['STRIPE_SECRET_KEY']:
+    raise RuntimeError("Stripe Secret Key not found in environment. Check your .env file.")
+
+stripe.api_key = app.config['STRIPE_SECRET_KEY']
+
+app.config['MPESA_CONSUMER_KEY'] = os.getenv('MPESA_CONSUMER_KEY')
+app.config['MPESA_CONSUMER_SECRET'] = os.getenv('MPESA_CONSUMER_SECRET')
+app.config['MPESA_SHORTCODE'] = os.getenv('MPESA_SHORTCODE')
+app.config['MPESA_PASSKEY'] = os.getenv('MPESA_PASSKEY')
+
+# Email Configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
 #Extensions
 db.init_app(app)
 bcrypt = Bcrypt(app)
+mail = Mail(app)
+
+# Initialize database and seed data
+with app.app_context():
+    db.create_all()
+    # Seed membership plans if not exist
+    if not MembershipPlan.query.first():
+        plans = [
+            MembershipPlan(name='Monthly', price=30.0, duration_days=30),
+            MembershipPlan(name='Quarterly', price=80.0, duration_days=90),
+            MembershipPlan(name='Annual', price=250.0, duration_days=365)
+        ]
+        db.session.add_all(plans)
+        db.session.commit()
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to acces this page'
@@ -68,6 +113,10 @@ def register():
         hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
         new_user = User(username=username, email=email, password_hash=hashed_pw, role=role)
         db.session.add(new_user)
+        db.session.flush()
+        if role == 'member':
+            new_member = Member(user_id=new_user.id, name=username, email=email)
+            db.session.add(new_member)
         db.session.commit()
         flash('Account created successfully! You can now login in.', 'success')
         return redirect(url_for('login'))
@@ -95,7 +144,7 @@ def dashboard():
 @login_required
 def members():
     all_members = Member.query.all()
-    return render_template('members.html', members=all_members)
+    return render_template('members.html', members=all_members, plans=MembershipPlan.query.all())
 
 @app.route('/members/add', methods=['POST'])
 @login_required
@@ -103,14 +152,14 @@ def add_member():
     name = request.form.get('name')
     email = request.form.get('email')
     phone = request.form.get('phone')
-    membership_plan = request.form.get('membership_plan')
+    plan_id = request.form.get('plan_id')
     goal = request.form.get('goal')
     status = request.form.get('status')
     password = request.form.get('password')
 
     existing = User.query.filter_by(email=email).first()
     if existing:
-      flash('A user with this eamil already exists.', 'danger')
+      flash('A user with this email already exists.', 'danger')
       return redirect(url_for('members'))
 
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
@@ -118,16 +167,16 @@ def add_member():
     db.session.add(new_user)
     db.session.flush()
 
-# Create meber profile
+    # Create member profile
     new_member = Member(
-    user_id = new_user.id,
-    name    = name,
-    email   = email,
-    phone   = phone,
-    membership_plan = membership_plan,
-    goal = goal,
-    status = status
-)
+        user_id = new_user.id,
+        name    = name,
+        email   = email,
+        phone   = phone,
+        plan_id = int(plan_id) if plan_id else None,
+        goal = goal,
+        status = status
+    )
     db.session.add(new_member)
     db.session.commit()
     flash(f'Member {name} added successfully', 'success')
@@ -138,16 +187,17 @@ def add_member():
 def edit_member(id):
     member = Member.query.get_or_404(id)
     if request.method == 'POST':
-        member.name            = request.form.get('name')
-        member.email           = request.form.get('email')
-        member.phone           = request.form.get('phone')
-        member.membership_plan = request.form.get('membership_plan')
-        member.goal            = request.form.get('goal')
-        member.status          = request.form.get('status')
+        member.name   = request.form.get('name')
+        member.email  = request.form.get('email')
+        member.phone  = request.form.get('phone')
+        plan_id       = request.form.get('plan_id')
+        member.plan_id = int(plan_id) if plan_id else None
+        member.goal   = request.form.get('goal')
+        member.status = request.form.get('status')
         db.session.commit()
         flash('Member updated successfully!', 'success')
         return redirect(url_for('members'))
-    return render_template('edit_member.html', member=member)
+    return render_template('edit_member.html', member=member, plans=MembershipPlan.query.all())
 
 @app.route('/members/delete/<int:id>')
 @login_required
@@ -297,7 +347,7 @@ def nutrition():
 @app.route('/nutrition/add', methods=['POST'])
 @login_required
 def add_nutrition():
-    member_id = request.form.get('memeber_id')
+    member_id = request.form.get('member_id')
     meal_plan = request.form.get('meal_plan')
     calories = request.form.get('calories')
     protein = request.form.get('protein')
@@ -423,6 +473,7 @@ def payments():
     return render_template('payments.html',
                            payment=all_payments,
                            members=all_members,
+                           plans=MembershipPlan.query.all(),
                            total_revenue=total_revenue,
                            total_payments=total_payments,
                            expiring_count=expiring_count)
@@ -457,6 +508,120 @@ def delete_payment(id):
     flash('Payment deleted successfully!', 'success')
     return redirect(url_for('payments'))
 
+# Stripe Payment Route
+@app.route('/payment/stripe/<int:plan_id>', methods=['POST'])
+@login_required
+def stripe_payment(plan_id):
+    plan = MembershipPlan.query.get_or_404(plan_id)
+    
+    # Get the member's profile safely
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    
+    if not member:
+        flash('Member profile not found. Please make sure you are logged in as a member.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': f'{plan.name} Membership',
+                    },
+                    'unit_amount': int(plan.price * 100),
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=url_for('payment_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=url_for('payments', _external=True),
+            metadata={
+                'plan_id': str(plan_id), 
+                'member_id': str(member.id)
+            }
+        )
+        return redirect(checkout_session.url)
+        
+    except Exception as e:
+        flash(f'Error creating Stripe session: {str(e)}', 'danger')
+        return redirect(url_for('payments'))
+    
+# ====================== STRIPE PAYMENT SUCCESS ======================
+@app.route('/payment/success')
+@login_required
+def payment_success():
+    session_id = request.args.get('session_id')
+    if session_id:
+        flash('✅ Payment successful! Your membership has been activated.', 'success')
+    else:
+        flash('Payment completed, but session could not be verified.', 'warning')
+    
+    return redirect(url_for('dashboard'))
+
+# ====================== STRIPE WEBHOOK ======================
+@app.route('/webhook/stripe', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('stripe-signature')
+    endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+
+    if not endpoint_secret:
+        print("Warning: STRIPE_WEBHOOK_SECRET not set in .env")
+        return 'Webhook secret not configured', 400
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError:
+        return 'Invalid payload', 400
+    except stripe.error.SignatureVerificationError:
+        return 'Invalid signature', 400
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return 'Error', 400
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        try:
+            member_id = int(session['metadata'].get('member_id'))
+            plan_id = int(session['metadata'].get('plan_id'))
+
+            member = Member.query.get(member_id)
+            plan = MembershipPlan.query.get(plan_id)
+
+            if member and plan:
+                expiry_date = datetime.utcnow().date() + timedelta(days=plan.duration_days)
+
+                payment = Payment(
+                    member_id=member_id,
+                    amount=plan.price,
+                    method='stripe',
+                    expiry_date=expiry_date,
+                    transaction_id=session.get('id'),
+                    status='completed',
+                    external_status='completed'
+                )
+                db.session.add(payment)
+                
+                member.plan_id = plan_id
+                member.status = 'active'
+                db.session.commit()
+
+                send_payment_email(member.email, plan.name, plan.price)
+                print(f"Payment processed for member {member_id}")
+                
+        except Exception as e:
+            print(f"Error processing webhook: {e}")
+
+    return '', 200
+
+# Email function
+def send_payment_email(email, plan_name, amount):
+    msg = Message('Payment Confirmation', recipients=[email])
+    msg.body = f'Thank you for your payment.\n\nPlan: {plan_name}\nAmount: ${amount}\n\nYour membership is now active.'
+    mail.send(msg)
+
 # Reports page
 @app.route('/reports')
 @login_required
@@ -473,9 +638,9 @@ def reports():
     card_revenue = db.session.query(db.func.sum(Payment.amount)).filter_by(method='card').scalar() or 0
 
     # Membership plan counts
-    monthly_count = Member.query.filter_by(membership_plan='monthly').count()
-    quarterly_count = Member.query.filter_by(membership_plan='quarterly').count()
-    annual_count = Member.query.filter_by(membership_plan='annual').count()
+    monthly_count = Member.query.join(MembershipPlan).filter(MembershipPlan.name == 'Monthly').count()
+    quarterly_count = Member.query.join(MembershipPlan).filter(MembershipPlan.name == 'Quarterly').count()
+    annual_count = Member.query.join(MembershipPlan).filter(MembershipPlan.name == 'Annual').count()
     return render_template('reports.html',
                            total_members=total_members,
                            total_trainers=total_trainers,

@@ -11,11 +11,23 @@ class User(UserMixin, db.Model):
     username      = db.Column(db.String(100), nullable=False)
     email         = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    role          = db.Column(db.String(20), nullable=False, default='member')  # admin / trainer / member
+    role          = db.Column(db.String(20), nullable=False, default='member')
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
-    member  = db.relationship('Member',  backref='user', uselist=False)
-    trainer = db.relationship('Trainer', backref='user', uselist=False)
+    # One-to-One relationships - Use back_populates (modern & safer)
+    member = db.relationship(
+        'Member', 
+        back_populates='user', 
+        uselist=False, 
+        cascade="all, delete-orphan"
+    )
+    
+    trainer = db.relationship(
+        'Trainer', 
+        back_populates='user', 
+        uselist=False, 
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f'<User {self.email} - {self.role}>'
@@ -25,15 +37,21 @@ class User(UserMixin, db.Model):
 class Member(db.Model):
     __tablename__ = 'members'
     id              = db.Column(db.Integer, primary_key=True)
-    user_id         = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id         = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)  # Added unique=True
     name            = db.Column(db.String(100), nullable=False)
     phone           = db.Column(db.String(20))
     email           = db.Column(db.String(150))
-    membership_plan = db.Column(db.String(50))  # monthly / quarterly / annual
+    plan_id         = db.Column(db.Integer, db.ForeignKey('membership_plans.id'))
     goal            = db.Column(db.String(200))
     join_date       = db.Column(db.Date, default=datetime.utcnow)
-    status          = db.Column(db.String(20), default='active')  # active / inactive
+    status          = db.Column(db.String(20), default='active')
 
+    # Back to User
+    user = db.relationship('User', back_populates='member')
+
+    plan = db.relationship('MembershipPlan', backref='members')
+
+    # Other relationships...
     attendance   = db.relationship('Attendance',   backref='member', lazy=True)
     payments     = db.relationship('Payment',      backref='member', lazy=True)
     progress     = db.relationship('Progress',     backref='member', lazy=True)
@@ -44,24 +62,37 @@ class Member(db.Model):
     def __repr__(self):
         return f'<Member {self.name}>'
 
+# Membership Plans Table
+class MembershipPlan(db.Model):
+    __tablename__ = 'membership_plans'
+    id            = db.Column(db.Integer, primary_key=True)
+    name          = db.Column(db.String(50), nullable=False)  # Monthly / Quarterly / Annual
+    price         = db.Column(db.Float, nullable=False)
+    duration_days = db.Column(db.Integer, nullable=False)  # 30 / 90 / 365
+
+    def __repr__(self):
+        return f'<MembershipPlan {self.name} - ${self.price}>'
+
 
 # Trainers Table 
 class Trainer(db.Model):
     __tablename__ = 'trainers'
     id             = db.Column(db.Integer, primary_key=True)
-    user_id        = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id        = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)  # Added unique=True
     name           = db.Column(db.String(100), nullable=False)
     phone          = db.Column(db.String(20))
     email          = db.Column(db.String(150))
     specialization = db.Column(db.String(100))
     bio            = db.Column(db.Text)
 
+    # Back to User
+    user = db.relationship('User', back_populates='trainer')
+
     workouts = db.relationship('Workout', backref='trainer', lazy=True)
     classes  = db.relationship('Class',   backref='trainer', lazy=True)
 
     def __repr__(self):
         return f'<Trainer {self.name}>'
-
 
 # Workouts Table
 class Workout(db.Model):
@@ -126,10 +157,14 @@ class Payment(db.Model):
     id           = db.Column(db.Integer, primary_key=True)
     member_id    = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
     amount       = db.Column(db.Float, nullable=False)
-    method       = db.Column(db.String(20))   # cash / mpesa / card
+    method       = db.Column(db.String(20))   # cash / mpesa / card / stripe
     expiry_date  = db.Column(db.Date)
     payment_date = db.Column(db.DateTime, default=datetime.utcnow)
     status       = db.Column(db.String(20), default='completed')
+    transaction_id = db.Column(db.String(100))
+    external_status = db.Column(db.String(20), default='pending')
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
         return f'<Payment member={self.member_id} amount={self.amount}>'

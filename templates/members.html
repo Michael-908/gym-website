@@ -39,7 +39,7 @@
                     <td>{{ member.email }}</td>
                     <td>{{ member.phone }}</td>
                     <td>
-                      <span class="badge badge-info">{{ member.membership_plan }}</span>
+                      <span class="badge badge-info">{{ member.plan.name if member.plan else 'None' }}</span>
                     </td>
                     <td>{{ member.goal }}</td>
                     <td>
@@ -108,11 +108,11 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Membership Plan <span class="text-danger">*</span></label>
-                                <select class="form-control" name="membership_plan" required>
+                                <select class="form-control" name="plan_id" required>
                                     <option value="">Select Plan</option>
-                                    <option value="monthly">Monthly</option>
-                                    <option value="quarterly">Quarterly</option>
-                                    <option value="annual">Annual</option>
+                                    {% for plan in plans %}
+                                    <option value="{{ plan.id }}">{{ plan.name }} - ${{ "%.2f"|format(plan.price) }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>

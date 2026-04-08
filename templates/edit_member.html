@@ -41,10 +41,11 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label>Membership Plan</label>
-                        <select class="form-control" name="membership_plan">
-                            <option value="monthly" {% if member.membership_plan == 'monthly' %}selected{% endif %}>Monthly</option>
-                            <option value="quarterly" {% if member.membership_plan == 'quarterly' %}selected{% endif %}>Quarterly</option>
-                            <option value="annual" {% if member.membership_plan == 'annual' %}selected{% endif %}>Annual</option>
+                        <select class="form-control" name="plan_id">
+                            <option value="">Select Plan</option>
+                            {% for plan in plans %}
+                            <option value="{{ plan.id }}" {% if member.plan_id == plan.id %}selected{% endif %}>{{ plan.name }} - ${{ "%.2f"|format(plan.price) }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

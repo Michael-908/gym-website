@@ -12,6 +12,33 @@
     </button>
 </div>
 
+<!-- Membership Plans -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Membership Plans</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for plan in plans %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ plan.name }}</h5>
+                        <h3 class="text-primary">${{ "%.2f"|format(plan.price) }}</h3>
+                        <p class="text-muted">{{ plan.duration_days }} days</p>
+                        <form method="POST" action="{{ url_for('stripe_payment', plan_id=plan.id) }}">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-credit-card mr-1"></i> Pay with Stripe
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 <!-- Stats Row -->
 <div class="row">
     <div class="col-xl-4 col-md-6 mb-4">
@@ -92,8 +119,10 @@
                                 <span class="badge badge-success">M-Pesa</span>
                             {% elif payment.method == 'cash' %}
                                 <span class="badge badge-primary">Cash</span>
+                            {% elif payment.method == 'stripe' %}
+                                <span class="badge badge-info">Stripe</span>
                             {% else %}
-                                <span class="badge badge-info">Card</span>
+                                <span class="badge badge-secondary">Card</span>
                             {% endif %}
                         </td>
                         <td>{{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}</td>
