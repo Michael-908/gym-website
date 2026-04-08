@@ -461,7 +461,35 @@ def delete_payment(id):
 @app.route('/reports')
 @login_required
 def reports():
-    return render_template('reports.html')
+    total_members = Member.query.count()
+    total_trainers = Trainer.query.count()
+    total_attendance = Attendance.query.count()
+    total_revenue = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
+    recent_payments = Payment.query.order_by(Payment.payment_date.desc()).limit(10).all()
+
+    # Revenue by method
+    cash_revenue = db.session.query(db.func.sum(Payment.amount)).filter_by(method='cash').scalar() or 0
+    mpesa_revenue = db.session.query(db.func.sum(Payment.amount)).filter_by(method='mpesa').scalar() or 0
+    card_revenue = db.session.query(db.func.sum(Payment.amount)).filter_by(method='card').scalar() or 0
+
+    # Membership plan counts
+    monthly_count = Member.query.filter_by(membership_plan='monthly').count()
+    quarterly_count = Member.query.filter_by(membership_plan='quarterly').count()
+    annual_count = Member.query.filter_by(membership_plan='annual').count()
+    return render_template('reports.html',
+                           total_members=total_members,
+                           total_trainers=total_trainers,
+                           total_attendance=total_attendance,
+                           total_revenue=total_revenue,
+                           recent_payments=recent_payments,
+                           cash_revenue=cash_revenue,
+                           mpesa_revenue=mpesa_revenue,
+                           card_revenue=card_revenue,
+                           monthly_count=monthly_count,
+                           quarterly_count=quarterly_count,
+                           annual_count=annual_count)
+    
+
 
 # Progress page
 @app.route('/progress')
@@ -510,13 +538,82 @@ def delete_progress(id):
 @login_required
 def classes():
     all_classes = Class.query.all()
-    return render_template('classes.html', classes=all_classes)
+    all_trainers = Trainer.query.all()
+    return render_template('classes.html', classes=all_classes, trainers=all_trainers)
+
+@app.route('/classes/add', methods=['POST'])
+@login_required
+def add_class():
+    from datetime import datetime
+    name = request.form.get('name')
+    trainer_id = request.form.get('trainer_id')
+    schedule = request.form.get('schedule')
+    capacity = request.form.get('capacity')
+    description = request.form.get('description')
+
+    new_class = Class(
+        name = name,
+        trainer_id = int(trainer_id),
+        schedule = datetime.strptime(schedule, '%Y-%m-%dT%H:%M'),
+        capacity = int(capacity),
+        description = description
+    )
+    db.session.add(new_class)
+    db.session.commit()
+    flash(f'Class {name} added successfully!', 'success')
+    return redirect(url_for('classes'))
+
+@app.route('/classes/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_class(id):
+    from datetime import datetime
+    gym_class    = Class.query.get_or_404(id)
+    all_trainers = Trainer.query.all()
+    if request.method == 'POST':
+        gym_class.name        = request.form.get('name')
+        gym_class.trainer_id  = int(request.form.get('trainer_id'))
+        gym_class.schedule    = datetime.strptime(request.form.get('schedule'), '%Y-%m-%dT%H:%M')
+        gym_class.capacity    = int(request.form.get('capacity'))
+        gym_class.description = request.form.get('description')
+        db.session.commit()
+        flash('Class updated successfully!', 'success')
+        return redirect(url_for('classes'))
+    return render_template('edit_class.html', gym_class=gym_class, trainers=all_trainers)
+
+@app.route('/classes/delete/<int:id>')
+@login_required
+def delete_class(id):
+    gym_class = Class.query.get_or_404(id)
+    db.session.delete(gym_class)
+    db.session.commit()
+    flash('Class deleted successfully!', 'success')
+    return redirect(url_for('classes'))
 
 # Settings page
 @app.route('/settings')
 @login_required
 def settings():
     return render_template('settings.html')
+
+@app.route('/settings/change-password', methods=['POST'])
+@login_required
+def change_password():
+    current_password = request.form.get('current_password')
+    new_password     = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    if not bcrypt.check_password_hash(current_user.password_hash, current_password):
+        flash('Current password is incorrect.', 'danger')
+        return redirect(url_for('settings'))
+
+    if new_password != confirm_password:
+        flash('New passwords do not match.', 'danger')
+        return redirect(url_for('settings'))
+
+    current_user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    db.session.commit()
+    flash('Password updated successfully!', 'success')
+    return redirect(url_for('settings'))
 
 # Error Handlers
 @app.errorhandler(404)

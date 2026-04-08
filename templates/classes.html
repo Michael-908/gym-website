@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Classes - Gym Management System{% endblock %}
+
+{% block content %}
+
+<!-- Page Heading -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Classes</h1>
+    <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#addClassModal">
+        <i class="fas fa-plus fa-sm text-white-50"></i> Add Class
+    </button>
+</div>
+
+<!-- Classes Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">All Classes</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Class Name</th>
+                        <th>Trainer</th>
+                        <th>Schedule</th>
+                        <th>Capacity</th>
+                        <th>Bookings</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for class in classes %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ class.name }}</td>
+                        <td>{{ class.trainer.name if class.trainer else 'N/A' }}</td>
+                        <td>{{ class.schedule.strftime('%d %b %Y %I:%M %p') if class.schedule else 'N/A' }}</td>
+                        <td>{{ class.capacity }}</td>
+                        <td>
+                            <span class="badge badge-info">{{ class.bookings|length }} / {{ class.capacity }}</span>
+                        </td>
+                        <td>{{ class.description }}</td>
+                        <td>
+                            <a href="{{ url_for('edit_class', id=class.id) }}"
+                                class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('delete_class', id=class.id) }}"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm('Delete this class?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-gray-500">No classes found. Add your first class!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Class Modal -->
+<div class="modal fade" id="addClassModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-alt mr-2"></i>Add New Class</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('add_class') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Class Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Trainer <span class="text-danger">*</span></label>
+                                <select class="form-control" name="trainer_id" required>
+                                    <option value="">Select Trainer</option>
+                                    {% for trainer in trainers %}
+                                    <option value="{{ trainer.id }}">{{ trainer.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Schedule <span class="text-danger">*</span></label>
+                                <input type="datetime-local" class="form-control"
+                                    name="schedule" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Capacity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control"
+                                    name="capacity" min="1" value="20" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea class="form-control" name="description"
+                                    rows="3" placeholder="Describe the class..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-1"></i> Save Class
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
