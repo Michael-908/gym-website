@@ -35,46 +35,61 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="row mb-4">
-    <div class="col-12">
-        <h6 class="text-white-50 text-uppercase mb-3 small">Quick Actions</h6>
-        <div class="row">
-            <div class="col-6 col-md-2 mb-3">
-                <a href="{{ url_for('my_workouts') }}" class="member-action-card text-center d-block">
-                    <i class="fas fa-running fa-2x mb-2" style="color:#1A73E8;"></i>
-                    <div class="small font-weight-bold">Workouts</div>
-                </a>
-            </div>
-            <div class="col-6 col-md-2 mb-3">
-                <a href="{{ url_for('my_progress') }}" class="member-action-card text-center d-block">
-                    <i class="fas fa-chart-line fa-2x mb-2" style="color:#10B981;"></i>
-                    <div class="small font-weight-bold">Progress</div>
-                </a>
-            </div>
-            <div class="col-6 col-md-2 mb-3">
-                <a href="{{ url_for('my_nutrition') }}" class="member-action-card text-center d-block">
-                    <i class="fas fa-apple-alt fa-2x mb-2" style="color:#F59E0B;"></i>
-                    <div class="small font-weight-bold">Nutrition</div>
-                </a>
-            </div>
-            <div class="col-6 col-md-2 mb-3">
-                <a href="{{ url_for('my_attendance') }}" class="member-action-card text-center d-block">
-                    <i class="fas fa-calendar-check fa-2x mb-2" style="color:#36B9CC;"></i>
-                    <div class="small font-weight-bold">Attendance</div>
-                </a>
-            </div>
-            <div class="col-6 col-md-2 mb-3">
-                <a href="{{ url_for('my_payments') }}" class="member-action-card text-center d-block">
-                    <i class="fas fa-credit-card fa-2x mb-2" style="color:#8B5CF6;"></i>
-                    <div class="small font-weight-bold">Payments</div>
-                </a>
-            </div>
-            <div class="col-6 col-md-2 mb-3">
-                <a href="{{ url_for('trainer_profiles') }}" class="member-action-card text-center d-block">
-                    <i class="fas fa-user-tie fa-2x mb-2" style="color:#F85149;"></i>
-                    <div class="small font-weight-bold">Trainers</div>
-                </a>
-            </div>
+<div class="member-card mb-4">
+    <div class="member-card-header">
+        <i class="fas fa-bolt mr-2" style="color:#F59E0B;"></i>Quick Actions
+    </div>
+    <div class="member-card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            <a href="{{ url_for('my_workouts') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#1A73E8;color:#fff;">
+                <i class="fas fa-running"></i> My Workouts
+            </a>
+            <a href="{{ url_for('my_progress') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#10B981;color:#fff;">
+                <i class="fas fa-chart-line"></i> My Progress
+            </a>
+            <a href="{{ url_for('my_nutrition') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#F59E0B;color:#000;">
+                <i class="fas fa-apple-alt"></i> Nutrition
+            </a>
+            <a href="{{ url_for('my_attendance') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#36B9CC;color:#fff;">
+                <i class="fas fa-calendar-check"></i> Attendance
+            </a>
+            <a href="{{ url_for('my_payments') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#8B5CF6;color:#fff;">
+                <i class="fas fa-credit-card"></i> Payments
+            </a>
+            <a href="{{ url_for('trainer_profiles') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#30363D;color:#E6EDF3;">
+                <i class="fas fa-user-tie"></i> Our Trainers
+            </a>
+            <a href="{{ url_for('settings') }}"
+               style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+                      border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+                      font-weight:600;text-decoration:none;transition:all 0.2s;
+                      background:#30363D;color:#E6EDF3;">
+                <i class="fas fa-cog"></i> Settings
+            </a>
         </div>
     </div>
 </div>
