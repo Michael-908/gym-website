@@ -1,4 +1,8 @@
+{% if current_user.role == 'member' %}
+{% extends "member_base.html" %}
+{% else %}
 {% extends "base.html" %}
+{% endif %}
 
 {% block title %}Settings - Gym Management System{% endblock %}
 
@@ -6,32 +10,54 @@
 
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Settings</h1>
+    <h1 class="h3 mb-0 {% if current_user.role == 'member' %}text-white{% else %}text-gray-800{% endif %}">
+        Settings
+    </h1>
+    {% if current_user.role == 'member' %}
+    <a href="{{ url_for('member_dashboard') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to Dashboard
+    </a>
+    {% endif %}
 </div>
 
 <div class="row">
 
     <!-- Change Password -->
     <div class="col-lg-6 mb-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-lock mr-2"></i>Change Password
-                </h6>
+        <div class="{% if current_user.role == 'member' %}member-card{% else %}card shadow mb-4{% endif %}">
+            <div class="{% if current_user.role == 'member' %}member-card-header{% else %}card-header py-3{% endif %}">
+                {% if current_user.role != 'member' %}<h6 class="m-0 font-weight-bold text-primary">{% endif %}
+                <i class="fas fa-lock mr-2"></i>Change Password
+                {% if current_user.role != 'member' %}</h6>{% endif %}
             </div>
-            <div class="card-body">
+            <div class="{% if current_user.role == 'member' %}member-card-body{% else %}card-body{% endif %}">
                 <form method="POST" action="{{ url_for('change_password') }}">
                     <div class="form-group">
-                        <label>Current Password</label>
-                        <input type="password" class="form-control" name="current_password" required>
+                        <label class="{% if current_user.role == 'member' %}text-white-50 small{% endif %}">
+                            Current Password
+                        </label>
+                        <input type="password" class="form-control" name="current_password" required
+                               {% if current_user.role == 'member' %}
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"
+                               {% endif %}>
                     </div>
                     <div class="form-group">
-                        <label>New Password</label>
-                        <input type="password" class="form-control" name="new_password" required>
+                        <label class="{% if current_user.role == 'member' %}text-white-50 small{% endif %}">
+                            New Password
+                        </label>
+                        <input type="password" class="form-control" name="new_password" required
+                               {% if current_user.role == 'member' %}
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"
+                               {% endif %}>
                     </div>
                     <div class="form-group">
-                        <label>Confirm New Password</label>
-                        <input type="password" class="form-control" name="confirm_password" required>
+                        <label class="{% if current_user.role == 'member' %}text-white-50 small{% endif %}">
+                            Confirm New Password
+                        </label>
+                        <input type="password" class="form-control" name="confirm_password" required
+                               {% if current_user.role == 'member' %}
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"
+                               {% endif %}>
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save mr-1"></i> Update Password
@@ -43,14 +69,14 @@
 
     <!-- Account Info -->
     <div class="col-lg-6 mb-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-user mr-2"></i>Account Information
-                </h6>
+        <div class="{% if current_user.role == 'member' %}member-card{% else %}card shadow mb-4{% endif %}">
+            <div class="{% if current_user.role == 'member' %}member-card-header{% else %}card-header py-3{% endif %}">
+                {% if current_user.role != 'member' %}<h6 class="m-0 font-weight-bold text-primary">{% endif %}
+                <i class="fas fa-user mr-2"></i>Account Information
+                {% if current_user.role != 'member' %}</h6>{% endif %}
             </div>
-            <div class="card-body">
-                <table class="table table-bordered">
+            <div class="{% if current_user.role == 'member' %}member-card-body{% else %}card-body{% endif %}">
+                <table class="table {% if current_user.role == 'member' %}table-dark{% else %}table-bordered{% endif %}">
                     <tr>
                         <th>Username</th>
                         <td>{{ current_user.username }}</td>
@@ -61,9 +87,7 @@
                     </tr>
                     <tr>
                         <th>Role</th>
-                        <td>
-                            <span class="badge badge-primary">{{ current_user.role }}</span>
-                        </td>
+                        <td><span class="badge badge-primary">{{ current_user.role }}</span></td>
                     </tr>
                     <tr>
                         <th>Member Since</th>
@@ -73,31 +97,19 @@
             </div>
         </div>
 
-        <!-- Gym Info -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-dumbbell mr-2"></i>System Information
-                </h6>
+        <!-- System Info -->
+        <div class="{% if current_user.role == 'member' %}member-card{% else %}card shadow mb-4{% endif %}">
+            <div class="{% if current_user.role == 'member' %}member-card-header{% else %}card-header py-3{% endif %}">
+                {% if current_user.role != 'member' %}<h6 class="m-0 font-weight-bold text-primary">{% endif %}
+                <i class="fas fa-dumbbell mr-2"></i>System Information
+                {% if current_user.role != 'member' %}</h6>{% endif %}
             </div>
-            <div class="card-body">
-                <table class="table table-bordered">
-                    <tr>
-                        <th>System</th>
-                        <td>Gym Management System</td>
-                    </tr>
-                    <tr>
-                        <th>Version</th>
-                        <td>1.0.0</td>
-                    </tr>
-                    <tr>
-                        <th>Database</th>
-                        <td>SQLite</td>
-                    </tr>
-                    <tr>
-                        <th>Framework</th>
-                        <td>Python Flask</td>
-                    </tr>
+            <div class="{% if current_user.role == 'member' %}member-card-body{% else %}card-body{% endif %}">
+                <table class="table {% if current_user.role == 'member' %}table-dark{% else %}table-bordered{% endif %}">
+                    <tr><th>System</th><td>Gym Management System</td></tr>
+                    <tr><th>Version</th><td>1.0.0</td></tr>
+                    <tr><th>Database</th><td>SQLite</td></tr>
+                    <tr><th>Framework</th><td>Python Flask</td></tr>
                 </table>
             </div>
         </div>

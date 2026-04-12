@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{% block title %}Gym Management System{% endblock %}</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: #0D1117;
+            color: #E6EDF3;
+            font-family: 'Nunito', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Top Navbar */
+        .member-navbar {
+            background: #161B22;
+            border-bottom: 1px solid #30363D;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .member-navbar-brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #1A73E8;
+            text-decoration: none;
+        }
+        .member-navbar-brand i { margin-right: 8px; }
+        .member-navbar-right { display: flex; align-items: center; gap: 15px; }
+        .member-navbar-user {
+            font-size: 0.85rem;
+            color: #8B949E;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .member-navbar-user img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #1A73E8;
+        }
+
+        /* Bottom Navigation (Mobile) */
+        .member-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #161B22;
+            border-top: 1px solid #30363D;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 1000;
+        }
+        .member-bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #8B949E;
+            text-decoration: none;
+            font-size: 0.65rem;
+            gap: 4px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .member-bottom-nav a i { font-size: 1.1rem; }
+        .member-bottom-nav a.active,
+        .member-bottom-nav a:hover { color: #1A73E8; }
+
+        /* Main Content */
+        .member-content {
+            padding: 20px 15px 90px 15px;
+            max-width: 768px;
+            margin: 0 auto;
+        }
+
+        /* Welcome Section */
+        .member-welcome {
+            background: linear-gradient(135deg, #1A73E8 0%, #0D47A1 100%);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .member-badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Cards */
+        .member-card {
+            background: #161B22;
+            border: 1px solid #30363D;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .member-card-header {
+            background: #21262D;
+            padding: 14px 18px;
+            font-weight: 700;
+            color: #E6EDF3;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #30363D;
+        }
+        .member-card-body { padding: 16px 18px; }
+
+        /* Action Cards */
+        .member-action-card {
+            background: #161B22;
+            border: 1px solid #30363D;
+            border-radius: 12px;
+            padding: 16px 8px;
+            color: #E6EDF3;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .member-action-card:hover {
+            border-color: #1A73E8;
+            background: #1C2333;
+            color: #E6EDF3;
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        /* List Items */
+        .member-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #21262D;
+        }
+        .member-list-item:last-child { border-bottom: none; }
+
+        /* Digital Membership Card */
+        .digital-card {
+            background: linear-gradient(135deg, #1A73E8 0%, #0D47A1 100%);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .digital-card::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        .digital-card-header {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .digital-card-name {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 4px;
+        }
+        .digital-card-plan {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 12px;
+        }
+        .digital-card-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .digital-card-expiry {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Stats Mini */
+        .member-stat-mini {
+            background: #21262D;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        /* Flash Messages */
+        .member-flash {
+            margin-bottom: 15px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0D1117; }
+        ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+
+        /* Desktop sidebar for larger screens */
+        @media (min-width: 768px) {
+            .member-bottom-nav { display: none; }
+            .member-sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 220px;
+                background: #161B22;
+                border-right: 1px solid #30363D;
+                padding: 20px 0;
+                z-index: 999;
+            }
+            .member-sidebar-brand {
+                padding: 0 20px 20px;
+                font-size: 1.1rem;
+                font-weight: 800;
+                color: #1A73E8;
+                border-bottom: 1px solid #30363D;
+                margin-bottom: 10px;
+            }
+            .member-sidebar a {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 20px;
+                color: #8B949E;
+                text-decoration: none;
+                font-size: 0.9rem;
+                transition: all 0.2s;
+            }
+            .member-sidebar a:hover,
+            .member-sidebar a.active { color: #1A73E8; background: #1C2333; }
+            .member-content {
+                margin-left: 220px;
+                padding: 20px 30px 40px;
+            }
+            .member-navbar { margin-left: 220px; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <!-- Desktop Sidebar -->
+    <div class="member-sidebar d-none d-md-block">
+        <div class="member-sidebar-brand">
+            <i class="fas fa-dumbbell"></i> GYM SYSTEM
+        </div>
+        <a href="{{ url_for('member_dashboard') }}" class="{% if request.endpoint == 'member_dashboard' %}active{% endif %}">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="{{ url_for('my_workouts') }}" class="{% if request.endpoint == 'my_workouts' %}active{% endif %}">
+            <i class="fas fa-running"></i> My Workouts
+        </a>
+        <a href="{{ url_for('my_nutrition') }}" class="{% if request.endpoint == 'my_nutrition' %}active{% endif %}">
+            <i class="fas fa-apple-alt"></i> My Nutrition
+        </a>
+        <a href="{{ url_for('my_progress') }}" class="{% if request.endpoint == 'my_progress' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i> My Progress
+        </a>
+        <a href="{{ url_for('my_attendance') }}" class="{% if request.endpoint == 'my_attendance' %}active{% endif %}">
+            <i class="fas fa-calendar-check"></i> Attendance
+        </a>
+        <a href="{{ url_for('my_payments') }}" class="{% if request.endpoint == 'my_payments' %}active{% endif %}">
+            <i class="fas fa-credit-card"></i> Payments
+        </a>
+        <a href="{{ url_for('trainer_profiles') }}" class="{% if request.endpoint == 'trainer_profiles' %}active{% endif %}">
+            <i class="fas fa-user-tie"></i> Our Trainers
+        </a>
+        <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">
+            <i class="fas fa-cog"></i> Settings
+        </a>
+        <a href="{{ url_for('logout') }}" style="margin-top:auto; color:#F85149;">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+
+    <!-- Top Navbar -->
+    <nav class="member-navbar">
+        <a class="member-navbar-brand" href="{{ url_for('member_dashboard') }}">
+            <i class="fas fa-dumbbell"></i>GYM
+        </a>
+        <div class="member-navbar-right">
+            <div class="member-navbar-user">
+                <img src="{{ url_for('static', filename='img/undraw_profile.svg') }}" alt="Profile">
+                <span>{{ current_user.username }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" style="color:#F85149; font-size:0.8rem;">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="member-content">
+
+        <!-- Flash Messages -->
+        <div class="member-flash">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="member-bottom-nav">
+        <a href="{{ url_for('member_dashboard') }}" class="{% if request.endpoint == 'member_dashboard' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('my_workouts') }}" class="{% if request.endpoint == 'my_workouts' %}active{% endif %}">
+            <i class="fas fa-running"></i>
+            <span>Workouts</span>
+        </a>
+        <a href="{{ url_for('my_progress') }}" class="{% if request.endpoint == 'my_progress' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i>
+            <span>Progress</span>
+        </a>
+        <a href="{{ url_for('my_payments') }}" class="{% if request.endpoint == 'my_payments' %}active{% endif %}">
+            <i class="fas fa-credit-card"></i>
+            <span>Payments</span>
+        </a>
+        <a href="{{ url_for('trainer_profiles') }}" class="{% if request.endpoint == 'trainer_profiles' %}active{% endif %}">
+            <i class="fas fa-user-tie"></i>
+            <span>Trainers</span>
+        </a>
+    </nav>
+
+    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

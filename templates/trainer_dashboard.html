@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Trainer Dashboard - Gym System</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #0D1117; color: #E6EDF3; font-family: 'Nunito', sans-serif; min-height: 100vh; }
+
+        /* ── Sidebar ── */
+        .t-sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+            background: #161B22; border-right: 1px solid #30363D;
+            padding: 0; z-index: 999; display: flex; flex-direction: column;
+        }
+        .t-sidebar-brand {
+            padding: 20px; font-size: 1.1rem; font-weight: 800; color: #1A73E8;
+            border-bottom: 1px solid #30363D; display: flex; align-items: center; gap: 10px;
+        }
+        .t-sidebar a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 20px; color: #8B949E; text-decoration: none;
+            font-size: 0.9rem; transition: all 0.2s; border-left: 3px solid transparent;
+        }
+        .t-sidebar a:hover, .t-sidebar a.active {
+            color: #E6EDF3; background: #1C2333; border-left-color: #1A73E8;
+        }
+        .t-sidebar a i { width: 18px; text-align: center; }
+        .t-sidebar-section { padding: 10px 20px 4px; font-size: 0.65rem; font-weight: 800;
+            color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; }
+        .t-sidebar-bottom { margin-top: auto; border-top: 1px solid #30363D; }
+        .t-sidebar-bottom a { color: #F85149 !important; }
+        .t-sidebar-bottom a:hover { background: rgba(248,81,73,0.1) !important; border-left-color: #F85149 !important; }
+
+        /* ── Topbar ── */
+        .t-topbar {
+            margin-left: 220px; background: #161B22; border-bottom: 1px solid #30363D;
+            padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .t-topbar-left h4 { font-size: 1.1rem; font-weight: 700; color: #E6EDF3; margin: 0; }
+        .t-topbar-left p { font-size: 0.8rem; color: #8B949E; margin: 0; }
+        .t-topbar-right { display: flex; align-items: center; gap: 14px; }
+        .t-user-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: #21262D; padding: 6px 12px; border-radius: 20px;
+            font-size: 0.85rem; color: #E6EDF3;
+        }
+        .t-user-badge img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1A73E8; }
+        .t-role-badge {
+            background: rgba(26,115,232,0.2); color: #1A73E8;
+            padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+        }
+
+        /* ── Content ── */
+        .t-content { margin-left: 220px; padding: 24px; }
+
+        /* ── Stat Cards ── */
+        .t-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .t-stat-card {
+            background: #161B22; border: 1px solid #30363D; border-radius: 12px;
+            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            transition: border-color 0.2s;
+        }
+        .t-stat-card:hover { border-color: #1A73E8; }
+        .t-stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            color: #8B949E; letter-spacing: 1px; margin-bottom: 6px; }
+        .t-stat-value { font-size: 1.8rem; font-weight: 800; color: #E6EDF3; }
+        .t-stat-icon { font-size: 1.8rem; opacity: 0.3; }
+        .t-stat-card.blue .t-stat-icon  { color: #1A73E8; }
+        .t-stat-card.green .t-stat-icon { color: #10B981; }
+        .t-stat-card.yellow .t-stat-icon{ color: #F59E0B; }
+        .t-stat-card.purple .t-stat-icon{ color: #8B5CF6; }
+        .t-stat-card.blue  { border-left: 3px solid #1A73E8; }
+        .t-stat-card.green { border-left: 3px solid #10B981; }
+        .t-stat-card.yellow{ border-left: 3px solid #F59E0B; }
+        .t-stat-card.purple{ border-left: 3px solid #8B5CF6; }
+
+        /* ── Quick Actions ── */
+        .t-quick-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+        .t-btn {
+            padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center;
+            gap: 7px; text-decoration: none; transition: all 0.2s;
+        }
+        .t-btn-primary   { background: #1A73E8; color: #fff; }
+        .t-btn-primary:hover { background: #1557B0; color: #fff; }
+        .t-btn-success   { background: #10B981; color: #fff; }
+        .t-btn-success:hover { background: #059669; color: #fff; }
+        .t-btn-warning   { background: #F59E0B; color: #000; }
+        .t-btn-warning:hover { background: #D97706; color: #000; }
+        .t-btn-info      { background: #36B9CC; color: #fff; }
+        .t-btn-info:hover{ background: #2a96a5; color: #fff; }
+        .t-btn-secondary { background: #30363D; color: #E6EDF3; }
+        .t-btn-secondary:hover { background: #3D444D; color: #E6EDF3; }
+        .t-btn-danger    { background: #F85149; color: #fff; }
+        .t-btn-danger:hover{ background: #d73a49; color: #fff; }
+        .t-btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+
+        /* ── Cards ── */
+        .t-card {
+            background: #161B22; border: 1px solid #30363D; border-radius: 12px;
+            overflow: hidden; margin-bottom: 20px;
+        }
+        .t-card-header {
+            background: #21262D; padding: 14px 18px;
+            font-weight: 700; font-size: 0.95rem; color: #E6EDF3;
+            border-bottom: 1px solid #30363D; display: flex; align-items: center;
+            justify-content: space-between;
+        }
+        .t-card-body { padding: 18px; }
+
+        /* ── Table ── */
+        .t-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .t-table th { padding: 10px 12px; text-align: left; color: #8B949E;
+            font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 1px solid #30363D; }
+        .t-table td { padding: 11px 12px; border-bottom: 1px solid #21262D; color: #C9D1D9; vertical-align: middle; }
+        .t-table tr:last-child td { border-bottom: none; }
+        .t-table tr:hover td { background: #1C2333; }
+
+        /* ── Badges ── */
+        .t-badge { display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 0.72rem; font-weight: 700; }
+        .t-badge-success { background: rgba(16,185,129,0.15); color: #10B981; }
+        .t-badge-warning { background: rgba(245,158,11,0.15); color: #F59E0B; }
+        .t-badge-danger  { background: rgba(248,81,73,0.15); color: #F85149; }
+        .t-badge-info    { background: rgba(54,185,204,0.15); color: #36B9CC; }
+        .t-badge-primary { background: rgba(26,115,232,0.15); color: #1A73E8; }
+
+        /* ── Grid ── */
+        .t-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .t-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+        /* ── List Items ── */
+        .t-list-item {
+            display: flex; align-items: center; padding: 12px 0;
+            border-bottom: 1px solid #21262D;
+        }
+        .t-list-item:last-child { border-bottom: none; }
+        .t-list-icon {
+            width: 38px; height: 38px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 1rem; margin-right: 12px; flex-shrink: 0;
+        }
+        .t-list-icon.blue   { background: rgba(26,115,232,0.15); color: #1A73E8; }
+        .t-list-icon.green  { background: rgba(16,185,129,0.15); color: #10B981; }
+        .t-list-icon.yellow { background: rgba(245,158,11,0.15); color: #F59E0B; }
+
+        /* ── Flash Messages ── */
+        .t-flash { margin-bottom: 16px; }
+        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 10px;
+            border: 1px solid transparent; font-size: 0.875rem; display: flex;
+            align-items: center; justify-content: space-between; }
+        .alert-success { background: rgba(16,185,129,0.1); border-color: #10B981; color: #10B981; }
+        .alert-danger  { background: rgba(248,81,73,0.1);  border-color: #F85149; color: #F85149; }
+        .alert-warning { background: rgba(245,158,11,0.1); border-color: #F59E0B; color: #F59E0B; }
+        .alert-info    { background: rgba(26,115,232,0.1); border-color: #1A73E8; color: #1A73E8; }
+        .alert .close  { background: none; border: none; color: inherit; cursor: pointer; font-size: 1.1rem; }
+
+        /* ── Modal ── */
+        .t-modal-overlay { display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
+        .t-modal-overlay.show { display: flex; }
+        .t-modal {
+            background: #161B22; border: 1px solid #30363D; border-radius: 14px;
+            width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+        }
+        .t-modal-header { padding: 18px 20px; border-bottom: 1px solid #30363D;
+            display: flex; align-items: center; justify-content: space-between; }
+        .t-modal-header h5 { margin: 0; font-weight: 700; color: #E6EDF3; }
+        .t-modal-close { background: none; border: none; color: #8B949E; cursor: pointer;
+            font-size: 1.3rem; line-height: 1; padding: 0; }
+        .t-modal-close:hover { color: #E6EDF3; }
+        .t-modal-body   { padding: 20px; }
+        .t-modal-footer { padding: 14px 20px; border-top: 1px solid #30363D;
+            display: flex; gap: 10px; justify-content: flex-end; }
+
+        /* ── Forms ── */
+        .t-form-group { margin-bottom: 16px; }
+        .t-form-group label { display: block; font-size: 0.82rem; font-weight: 600;
+            color: #8B949E; margin-bottom: 6px; }
+        .t-form-control {
+            width: 100%; padding: 9px 12px; background: #0D1117; border: 1px solid #30363D;
+            border-radius: 8px; color: #E6EDF3; font-size: 0.875rem; font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .t-form-control:focus { outline: none; border-color: #1A73E8; }
+        .t-form-row { display: grid; gap: 16px; }
+        .t-form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+
+        /* ── Client avatar ── */
+        .t-avatar { width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg,#1A73E8,#8B5CF6);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0D1117; }
+        ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+
+        /* ── Responsive ── */
+        @media (max-width: 992px) {
+            .t-stats { grid-template-columns: 1fr 1fr; }
+            .t-grid-2, .t-grid-3 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .t-sidebar { transform: translateX(-100%); }
+            .t-topbar, .t-content { margin-left: 0; }
+            .t-stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<nav class="t-sidebar">
+    <div class="t-sidebar-brand">
+        <i class="fas fa-dumbbell"></i> GYM SYSTEM
+    </div>
+
+    <div class="t-sidebar-section">Main</div>
+    <a href="{{ url_for('trainer_dashboard') }}" class="active">
+        <i class="fas fa-tachometer-alt"></i> Dashboard
+    </a>
+
+    <div class="t-sidebar-section">Manage</div>
+    <a href="{{ url_for('classes') }}">
+        <i class="fas fa-calendar-alt"></i> Classes
+    </a>
+    <a href="{{ url_for('attendance') }}">
+        <i class="fas fa-calendar-check"></i> Attendance
+    </a>
+    <a href="{{ url_for('workouts') }}">
+        <i class="fas fa-running"></i> Workouts
+    </a>
+    <a href="{{ url_for('nutrition') }}">
+        <i class="fas fa-apple-alt"></i> Nutrition
+    </a>
+    <a href="{{ url_for('progress') }}">
+        <i class="fas fa-chart-line"></i> Progress
+    </a>
+
+    <div class="t-sidebar-section">Other</div>
+    <a href="{{ url_for('settings') }}">
+        <i class="fas fa-cog"></i> Settings
+    </a>
+
+    <div class="t-sidebar-bottom">
+        <a href="{{ url_for('logout') }}">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</nav>
+
+<!-- ── Topbar ── -->
+<nav class="t-topbar">
+    <div class="t-topbar-left">
+        <h4>Welcome back, {{ trainer.name if trainer else current_user.username }}! 👋</h4>
+        <p><i class="fas fa-calendar-day" style="margin-right:5px;"></i>{{ today.strftime('%A, %d %B %Y') }}
+            — <strong>{{ today_classes|length }}</strong> class(es) today</p>
+    </div>
+    <div class="t-topbar-right">
+        <span class="t-role-badge"><i class="fas fa-user-tie" style="margin-right:5px;"></i>Trainer</span>
+        <div class="t-user-badge">
+            <img src="{{ url_for('static', filename='img/undraw_profile.svg') }}" alt="Profile">
+            {{ current_user.username }}
+        </div>
+    </div>
+</nav>
+
+<!-- ── Main Content ── -->
+<div class="t-content">
+
+    <!-- Flash Messages -->
+    <div class="t-flash">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                    <button class="close" onclick="this.parentElement.remove()">×</button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Stats Row -->
+    <div class="t-stats">
+        <div class="t-stat-card blue">
+            <div>
+                <div class="t-stat-label">My Clients</div>
+                <div class="t-stat-value">{{ my_clients|length }}</div>
+            </div>
+            <div class="t-stat-icon"><i class="fas fa-users"></i></div>
+        </div>
+        <div class="t-stat-card green">
+            <div>
+                <div class="t-stat-label">Today's Classes</div>
+                <div class="t-stat-value">{{ today_classes|length }}</div>
+            </div>
+            <div class="t-stat-icon"><i class="fas fa-calendar-check"></i></div>
+        </div>
+        <div class="t-stat-card yellow">
+            <div>
+                <div class="t-stat-label">Attendance Today</div>
+                <div class="t-stat-value">{{ week_attendance }}</div>
+            </div>
+            <div class="t-stat-icon"><i class="fas fa-user-check"></i></div>
+        </div>
+        <div class="t-stat-card purple">
+            <div>
+                <div class="t-stat-label">Specialization</div>
+                <div class="t-stat-value" style="font-size:1rem;">
+                    {{ trainer.specialization if trainer else 'N/A' }}
+                </div>
+            </div>
+            <div class="t-stat-icon"><i class="fas fa-dumbbell"></i></div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="t-card">
+        <div class="t-card-header"><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i> Quick Actions</div>
+        <div class="t-card-body">
+            <div class="t-quick-actions">
+                <a href="{{ url_for('attendance') }}" class="t-btn t-btn-success">
+                    <i class="fas fa-calendar-check"></i> Mark Attendance
+                </a>
+                <a href="{{ url_for('classes') }}" class="t-btn t-btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Manage Classes
+                </a>
+                <a href="{{ url_for('workouts') }}" class="t-btn t-btn-info">
+                    <i class="fas fa-running"></i> Workouts
+                </a>
+                <a href="{{ url_for('nutrition') }}" class="t-btn t-btn-warning">
+                    <i class="fas fa-apple-alt"></i> Nutrition
+                </a>
+                <a href="{{ url_for('progress') }}" class="t-btn t-btn-secondary">
+                    <i class="fas fa-chart-line"></i> Progress
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Classes + Clients -->
+    <div class="t-grid-2">
+
+        <!-- Today's Classes -->
+        <div class="t-card">
+            <div class="t-card-header">
+                <span><i class="fas fa-calendar-day" style="margin-right:8px;color:#1A73E8;"></i>Today's Classes</span>
+                <a href="{{ url_for('classes') }}" class="t-btn t-btn-sm t-btn-primary">+ Add Class</a>
+            </div>
+            <div class="t-card-body">
+                {% if today_classes %}
+                    {% for class in today_classes %}
+                    <div class="t-list-item">
+                        <div class="t-list-icon blue"><i class="fas fa-dumbbell"></i></div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;color:#E6EDF3;">{{ class.name }}</div>
+                            <div style="font-size:0.8rem;color:#8B949E;">
+                                <i class="fas fa-clock" style="margin-right:4px;"></i>
+                                {{ class.schedule.strftime('%I:%M %p') if class.schedule else 'N/A' }}
+                                &nbsp;·&nbsp;
+                                <i class="fas fa-users" style="margin-right:4px;"></i>
+                                {{ class.bookings|length }}/{{ class.capacity }}
+                            </div>
+                        </div>
+                        <span class="t-badge t-badge-success">Today</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div style="text-align:center;padding:30px 0;color:#8B949E;">
+                    <i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
+                    No classes scheduled today
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- My Clients -->
+        <div class="t-card">
+            <div class="t-card-header">
+                <span><i class="fas fa-users" style="margin-right:8px;color:#10B981;"></i>My Clients</span>
+                <span class="t-badge t-badge-success">{{ my_clients|length }} total</span>
+            </div>
+            <div class="t-card-body">
+                {% if my_clients %}
+                    {% for client in my_clients %}
+                    <div class="t-list-item">
+                        <div class="t-avatar" style="margin-right:12px;">
+                            {{ client.name[0].upper() }}
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;color:#E6EDF3;">{{ client.name }}</div>
+                            <div style="font-size:0.78rem;color:#8B949E;">{{ client.goal or 'No goal set' }}</div>
+                        </div>
+                        <span class="t-badge {{ 't-badge-success' if client.status == 'active' else 't-badge-danger' }}">
+                            {{ client.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div style="text-align:center;padding:30px 0;color:#8B949E;">
+                    <i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
+                    No clients assigned yet
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Attendance -->
+    <div class="t-card">
+        <div class="t-card-header">
+            <span><i class="fas fa-list" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance Records</span>
+            <a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a>
+        </div>
+        <div class="t-card-body" style="padding:0;">
+            <div style="overflow-x:auto;">
+                <table class="t-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Member</th>
+                            <th>Date</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in recent_attendance %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">
+                                        {{ record.member.name[0].upper() if record.member else '?' }}
+                                    </div>
+                                    {{ record.member.name if record.member else 'N/A' }}
+                                </div>
+                            </td>
+                            <td>{{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}</td>
+                            <td>{{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}</td>
+                            <td>{{ record.check_out.strftime('%I:%M %p') if record.check_out else '—' }}</td>
+                            <td>
+                                {% if record.check_out %}
+                                    <span class="t-badge t-badge-info">Checked Out</span>
+                                {% else %}
+                                    <span class="t-badge t-badge-success">Present</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not record.check_out %}
+                                <a href="{{ url_for('check_out', id=record.id) }}" class="t-btn t-btn-sm t-btn-info">
+                                    <i class="fas fa-sign-out-alt"></i> Check Out
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Check-In Quick Form -->
+    <div class="t-card">
+        <div class="t-card-header">
+            <span><i class="fas fa-plus-circle" style="margin-right:8px;color:#10B981;"></i>Quick Check-In</span>
+        </div>
+        <div class="t-card-body">
+            <form method="POST" action="{{ url_for('check_in') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                <div class="t-form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+                    <label>Select Member</label>
+                    <select class="t-form-control" name="member_id" required>
+                        <option value="">Choose a member...</option>
+                        {% for member in all_members %}
+                        <option value="{{ member.id }}">{{ member.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="t-btn t-btn-success">
+                    <i class="fas fa-check"></i> Check In
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div><!-- /.t-content -->
+
+</body>
+</html>

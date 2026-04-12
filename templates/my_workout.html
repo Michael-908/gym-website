@@ -1,0 +1,177 @@
+{% extends "member_base.html" %}
+{% block title %}My Workouts - Gym{% endblock %}
+
+{% block content %}
+
+<div class="member-card mb-4">
+    <div class="member-card-header">
+        <i class="fas fa-running mr-2"></i>My Workouts
+    </div>
+    <div class="member-card-body">
+
+        <!-- Personal Workouts -->
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="text-white mb-0">Personal Workouts</h6>
+            <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addWorkoutModal">
+                <i class="fas fa-plus mr-1"></i> Add Workout
+            </button>
+        </div>
+
+        {% if personal_workouts %}
+            {% for workout in personal_workouts %}
+            <div class="member-list-item">
+                <div class="flex-grow-1">
+                    <div class="font-weight-bold text-white">{{ workout.name }}</div>
+                    <div class="text-white-50 small">
+                        <span class="badge badge-primary mr-1">{{ workout.type or 'General' }}</span>
+                        <span class="badge badge-secondary mr-1">{{ workout.difficulty or 'N/A' }}</span>
+                        {% if workout.duration %}<i class="fas fa-clock mr-1"></i>{{ workout.duration }} mins{% endif %}
+                    </div>
+                    {% if workout.description %}
+                    <div class="text-white-50 small mt-1">{{ workout.description }}</div>
+                    {% endif %}
+
+                    <!-- Trainer Comments -->
+                    {% if workout.comments %}
+                    <div class="mt-2">
+                        {% for comment in workout.comments %}
+                        <div style="background:rgba(26,115,232,0.1);border-left:3px solid #1A73E8;
+                                    padding:8px 12px;border-radius:0 6px 6px 0;margin-top:6px;">
+                            <div style="font-size:0.78rem;font-weight:700;color:#1A73E8;">
+                                <i class="fas fa-comment mr-1"></i>
+                                {{ comment.trainer.name if comment.trainer else 'Trainer' }}
+                            </div>
+                            <div style="font-size:0.82rem;color:#C9D1D9;">{{ comment.comment }}</div>
+                            <div style="font-size:0.72rem;color:#8B949E;">
+                                {{ comment.created_at.strftime('%d %b %Y') if comment.created_at else '' }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('delete_my_workout', id=workout.id) }}"
+                   class="btn btn-sm btn-outline-danger ml-2"
+                   onclick="return confirm('Delete this workout?')">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="text-center text-white-50 py-3">
+            <i class="fas fa-running fa-2x mb-2"></i>
+            <p>No personal workouts yet. Add one!</p>
+        </div>
+        {% endif %}
+
+        <!-- Assigned Workouts -->
+        <h6 class="text-white-50 mt-4 mb-3 small text-uppercase">Workouts Assigned by Trainer</h6>
+        {% if assigned_workouts %}
+            {% for mw in assigned_workouts %}
+            <div class="member-list-item">
+                <div class="flex-grow-1">
+                    <div class="font-weight-bold text-white">{{ mw.workout.name if mw.workout else 'N/A' }}</div>
+                    <div class="text-white-50 small">
+                        <span class="badge badge-info mr-1">{{ mw.workout.type if mw.workout else '' }}</span>
+                        <span class="badge badge-secondary mr-1">{{ mw.workout.difficulty if mw.workout else '' }}</span>
+                        {% if mw.workout and mw.workout.duration %}{{ mw.workout.duration }} mins{% endif %}
+                        &nbsp;·&nbsp; Assigned {{ mw.assigned_date.strftime('%d %b %Y') if mw.assigned_date else '' }}
+                    </div>
+                    {% if mw.workout and mw.workout.description %}
+                    <div class="text-white-50 small mt-1">{{ mw.workout.description }}</div>
+                    {% endif %}
+
+                    <!-- Trainer Comments on Assigned Workout -->
+                    {% if mw.workout and mw.workout.comments %}
+                    <div class="mt-2">
+                        {% for comment in mw.workout.comments %}
+                        <div style="background:rgba(16,185,129,0.1);border-left:3px solid #10B981;
+                                    padding:8px 12px;border-radius:0 6px 6px 0;margin-top:6px;">
+                            <div style="font-size:0.78rem;font-weight:700;color:#10B981;">
+                                <i class="fas fa-comment mr-1"></i>
+                                {{ comment.trainer.name if comment.trainer else 'Trainer' }}
+                            </div>
+                            <div style="font-size:0.82rem;color:#C9D1D9;">{{ comment.comment }}</div>
+                            <div style="font-size:0.72rem;color:#8B949E;">
+                                {{ comment.created_at.strftime('%d %b %Y') if comment.created_at else '' }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <span class="badge badge-success ml-2">Assigned</span>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="text-center text-white-50 py-3">
+            <p class="small">No trainer-assigned workouts yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Workout Modal -->
+<div class="modal fade" id="addWorkoutModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
+            <div class="modal-header" style="border-bottom:1px solid #30363D;">
+                <h5 class="modal-title text-white"><i class="fas fa-plus mr-2"></i>Add Personal Workout</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>×</span></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_my_workout') }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="text-white-50 small">Workout Name *</label>
+                        <input type="text" class="form-control" name="name" required
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label class="text-white-50 small">Type</label>
+                                <select class="form-control" name="type"
+                                        style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                                    <option value="HIIT">HIIT</option>
+                                    <option value="Strength">Strength</option>
+                                    <option value="Cardio">Cardio</option>
+                                    <option value="Flexibility">Flexibility</option>
+                                    <option value="General">General</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label class="text-white-50 small">Difficulty</label>
+                                <select class="form-control" name="difficulty"
+                                        style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                                    <option value="Beginner">Beginner</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Advanced">Advanced</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="text-white-50 small">Duration (minutes)</label>
+                        <input type="number" class="form-control" name="duration" min="1"
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                    </div>
+                    <div class="form-group">
+                        <label class="text-white-50 small">Description</label>
+                        <textarea class="form-control" name="description" rows="3"
+                                  style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #30363D;">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

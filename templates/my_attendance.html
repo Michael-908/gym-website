@@ -1,0 +1,41 @@
+{% extends "member_base.html" %}
+{% block title %}My Attendance - Gym{% endblock %}
+
+{% block content %}
+<div class="member-card mb-4">
+    <div class="member-card-header">
+        <i class="fas fa-calendar-check mr-2"></i>My Attendance
+        <span class="badge badge-info ml-2">{{ total }} total visits</span>
+    </div>
+    <div class="member-card-body">
+        {% if records %}
+            {% for record in records %}
+            <div class="member-list-item">
+                <div class="flex-grow-1">
+                    <div class="font-weight-bold text-white">
+                        {{ record.date.strftime('%A, %d %B %Y') if record.date else 'N/A' }}
+                    </div>
+                    <div class="text-white-50 small">
+                        <i class="fas fa-sign-in-alt mr-1 text-success"></i>
+                        In: {{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}
+                        &nbsp;·&nbsp;
+                        <i class="fas fa-sign-out-alt mr-1 text-danger"></i>
+                        Out: {{ record.check_out.strftime('%I:%M %p') if record.check_out else 'Still in' }}
+                    </div>
+                </div>
+                {% if record.check_out %}
+                    <span class="badge badge-secondary">Done</span>
+                {% else %}
+                    <span class="badge badge-success">Present</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="text-center text-white-50 py-4">
+            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+            <p>No attendance records yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
