@@ -1,149 +1,132 @@
 {% extends "base.html" %}
-
 {% block title %}Reports - Gym Management System{% endblock %}
 
 {% block content %}
 
-<!-- Page Heading -->
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Reports & Analytics</h1>
+<div style="margin-bottom:24px;">
+    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+        <i class="fas fa-chart-bar" style="color:#1A73E8;margin-right:8px;"></i>Reports & Analytics
+    </h4>
+    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Gym performance overview — revenue, attendance, membership and growth.</p>
 </div>
 
 <!-- Stats Row -->
-<div class="row">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Members</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_members }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-users fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+<div class="t-stats" style="margin-bottom:24px;">
+    <div class="t-stat-card blue">
+        <div>
+            <div class="t-stat-label">Total Members</div>
+            <div class="t-stat-value">{{ total_members }}</div>
         </div>
+        <div class="t-stat-icon"><i class="fas fa-users"></i></div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Revenue</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">KSh {{ "%.2f"|format(total_revenue) }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="t-stat-card green">
+        <div>
+            <div class="t-stat-label">Total Revenue</div>
+            <div class="t-stat-value" style="font-size:1.2rem;">KSh {{ "%.0f"|format(total_revenue) }}</div>
         </div>
+        <div class="t-stat-icon"><i class="fas fa-money-bill-wave"></i></div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Attendance</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_attendance }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="t-stat-card yellow">
+        <div>
+            <div class="t-stat-label">Total Attendance</div>
+            <div class="t-stat-value">{{ total_attendance }}</div>
         </div>
+        <div class="t-stat-icon"><i class="fas fa-calendar-check"></i></div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Total Trainers</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_trainers }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-user-tie fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="t-stat-card purple">
+        <div>
+            <div class="t-stat-label">Total Trainers</div>
+            <div class="t-stat-value">{{ total_trainers }}</div>
         </div>
+        <div class="t-stat-icon"><i class="fas fa-user-tie"></i></div>
     </div>
 </div>
 
 <!-- Charts Row -->
-<div class="row">
-    <!-- Revenue Chart -->
-    <div class="col-xl-8 col-lg-7 mb-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Revenue by Payment Method</h6>
-            </div>
-            <div class="card-body">
-                <canvas id="revenueChart" height="100"></canvas>
-            </div>
+<div class="t-grid-2" style="margin-bottom:20px;">
+    <div class="t-card">
+        <div class="t-card-header">
+            <span><i class="fas fa-chart-bar" style="margin-right:8px;color:#1A73E8;"></i>Revenue by Payment Method</span>
+        </div>
+        <div class="t-card-body">
+            <canvas id="revenueChart" height="200"></canvas>
         </div>
     </div>
-
-    <!-- Membership Plans Chart -->
-    <div class="col-xl-4 col-lg-5 mb-4">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Membership Plans</h6>
-            </div>
-            <div class="card-body">
-                <canvas id="membershipChart" height="200"></canvas>
-            </div>
+    <div class="t-card">
+        <div class="t-card-header">
+            <span><i class="fas fa-chart-pie" style="margin-right:8px;color:#8B5CF6;"></i>Membership Plans</span>
+        </div>
+        <div class="t-card-body">
+            <canvas id="membershipChart" height="200"></canvas>
         </div>
     </div>
 </div>
 
-<!-- Recent Payments Table -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Recent Payments</h6>
+<!-- Revenue Breakdown Cards -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;">
+    <div style="background:#161B22;border:1px solid #30363D;border-left:3px solid #1A73E8;border-radius:10px;padding:16px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cash Revenue</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#1A73E8;">KSh {{ "%.0f"|format(cash_revenue) }}</div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Member</th>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Date</th>
-                        <th>Expiry</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payment in recent_payments %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ payment.member.name if payment.member else 'N/A' }}</td>
-                        <td>KSh {{ "%.2f"|format(payment.amount) }}</td>
-                        <td>
-                            {% if payment.method == 'mpesa' %}
-                                <span class="badge badge-success">M-Pesa</span>
-                            {% elif payment.method == 'cash' %}
-                                <span class="badge badge-primary">Cash</span>
-                            {% else %}
-                                <span class="badge badge-info">Card</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}</td>
-                        <td>{{ payment.expiry_date.strftime('%d %b %Y') if payment.expiry_date else 'N/A' }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center text-gray-500">No payment records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div style="background:#161B22;border:1px solid #30363D;border-left:3px solid #10B981;border-radius:10px;padding:16px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">M-Pesa Revenue</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#10B981;">KSh {{ "%.0f"|format(mpesa_revenue) }}</div>
+    </div>
+    <div style="background:#161B22;border:1px solid #30363D;border-left:3px solid #36B9CC;border-radius:10px;padding:16px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Card/Stripe Revenue</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#36B9CC;">KSh {{ "%.0f"|format(card_revenue) }}</div>
+    </div>
+</div>
+
+<!-- Recent Payments Table -->
+<div class="t-card">
+    <div class="t-card-header">
+        <span><i class="fas fa-history" style="margin-right:8px;color:#10B981;"></i>Recent Payments</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="t-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Date</th>
+                    <th>Expiry</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in recent_payments %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">
+                                {{ payment.member.name[0].upper() if payment.member else '?' }}
+                            </div>
+                            <span style="color:#E6EDF3;font-weight:600;">{{ payment.member.name if payment.member else 'N/A' }}</span>
+                        </div>
+                    </td>
+                    <td><span style="color:#10B981;font-weight:700;">KSh {{ "%.2f"|format(payment.amount) }}</span></td>
+                    <td>
+                        {% if payment.method == 'mpesa' %}
+                            <span class="t-badge t-badge-success">M-Pesa</span>
+                        {% elif payment.method == 'cash' %}
+                            <span class="t-badge t-badge-primary">Cash</span>
+                        {% else %}
+                            <span class="t-badge t-badge-info">Card</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">{{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}</td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">{{ payment.expiry_date.strftime('%d %b %Y') if payment.expiry_date else 'N/A' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align:center;padding:30px;color:#8B949E;">No payment records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -152,39 +135,50 @@
 {% block extra_js %}
 <script src="{{ url_for('static', filename='vendor/chart.js/Chart.min.js') }}"></script>
 <script>
-    // Revenue by Payment Method Chart
-    var revenueCtx = document.getElementById('revenueChart').getContext('2d');
-    new Chart(revenueCtx, {
-        type: 'bar',
-        data: {
-            labels: ['Cash', 'M-Pesa', 'Card'],
-            datasets: [{
-                label: 'Revenue (KSh)',
-                data: [{{ cash_revenue }}, {{ mpesa_revenue }}, {{ card_revenue }}],
-                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                yAxes: [{ ticks: { beginAtZero: true } }]
-            }
+// Revenue Bar Chart
+var revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Cash', 'M-Pesa', 'Card/Stripe'],
+        datasets: [{
+            label: 'Revenue (KSh)',
+            data: [{{ cash_revenue }}, {{ mpesa_revenue }}, {{ card_revenue }}],
+            backgroundColor: ['rgba(26,115,232,0.7)', 'rgba(16,185,129,0.7)', 'rgba(54,185,204,0.7)'],
+            borderColor: ['#1A73E8', '#10B981', '#36B9CC'],
+            borderWidth: 1, borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } },
+            y: { ticks: { color: '#8B949E', beginAtZero: true }, grid: { color: '#21262D' } }
         }
-    });
+    }
+});
 
-    // Membership Plans Pie Chart
-    var membershipCtx = document.getElementById('membershipChart').getContext('2d');
-    new Chart(membershipCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Monthly', 'Quarterly', 'Annual'],
-            datasets: [{
-                data: [{{ monthly_count }}, {{ quarterly_count }}, {{ annual_count }}],
-                backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
-            }]
+// Membership Doughnut
+var membershipCtx = document.getElementById('membershipChart').getContext('2d');
+new Chart(membershipCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Monthly', 'Quarterly', 'Annual'],
+        datasets: [{
+            data: [{{ monthly_count }}, {{ quarterly_count }}, {{ annual_count }}],
+            backgroundColor: ['rgba(26,115,232,0.8)', 'rgba(16,185,129,0.8)', 'rgba(245,158,11,0.8)'],
+            borderColor: ['#1A73E8', '#10B981', '#F59E0B'],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: '#8B949E', padding: 16 } }
         },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+        cutout: '70%'
+    }
+});
 </script>
 {% endblock %}

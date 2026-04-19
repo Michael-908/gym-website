@@ -8,113 +8,282 @@
 
 {% block content %}
 
-<!-- Page Heading -->
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 {% if current_user.role == 'member' %}text-white{% else %}text-gray-800{% endif %}">
-        Settings
-    </h1>
+<!-- Page Header -->
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-cog" style="color:#8B949E;margin-right:8px;"></i>Settings
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Manage your account, password and preferences.</p>
+    </div>
     {% if current_user.role == 'member' %}
-    <a href="{{ url_for('member_dashboard') }}" class="btn btn-secondary btn-sm">
-        <i class="fas fa-arrow-left mr-1"></i> Back to Dashboard
+    <a href="{{ url_for('member_dashboard') }}" class="m-btn m-btn-secondary">
+        <i class="fas fa-arrow-left"></i> Dashboard
     </a>
     {% endif %}
 </div>
 
-<div class="row">
+{% if current_user.role == 'member' %}
+
+<!-- ═══════════════════════════ MEMBER SETTINGS ═══════════════════════════ -->
+
+<!-- Member Profile Banner -->
+<div style="background:linear-gradient(135deg,#1A73E8 0%,#0D47A1 100%);
+            border-radius:12px;padding:22px;margin-bottom:24px;
+            display:flex;align-items:center;gap:16px;">
+    <div style="width:56px;height:56px;border-radius:50%;
+                border:3px solid rgba(255,255,255,0.3);
+                background:rgba(255,255,255,0.15);
+                display:flex;align-items:center;justify-content:center;
+                font-size:1.5rem;font-weight:800;color:#fff;flex-shrink:0;">
+        {{ current_user.username[0].upper() }}
+    </div>
+    <div>
+        <div style="font-size:1.1rem;font-weight:800;color:#fff;">{{ current_user.username }}</div>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.65);">{{ current_user.email }}</div>
+        <div style="margin-top:6px;">
+            <span class="m-badge m-badge-primary">Member</span>
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-left:8px;">
+                Joined {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
     <!-- Change Password -->
-    <div class="col-lg-6 mb-4">
-        <div class="{% if current_user.role == 'member' %}member-card{% else %}card shadow mb-4{% endif %}">
-            <div class="{% if current_user.role == 'member' %}member-card-header{% else %}card-header py-3{% endif %}">
-                {% if current_user.role != 'member' %}<h6 class="m-0 font-weight-bold text-primary">{% endif %}
-                <i class="fas fa-lock mr-2"></i>Change Password
-                {% if current_user.role != 'member' %}</h6>{% endif %}
-            </div>
-            <div class="{% if current_user.role == 'member' %}member-card-body{% else %}card-body{% endif %}">
-                <form method="POST" action="{{ url_for('change_password') }}">
-                    <div class="form-group">
-                        <label class="{% if current_user.role == 'member' %}text-white-50 small{% endif %}">
-                            Current Password
-                        </label>
-                        <input type="password" class="form-control" name="current_password" required
-                               {% if current_user.role == 'member' %}
-                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"
-                               {% endif %}>
-                    </div>
-                    <div class="form-group">
-                        <label class="{% if current_user.role == 'member' %}text-white-50 small{% endif %}">
-                            New Password
-                        </label>
-                        <input type="password" class="form-control" name="new_password" required
-                               {% if current_user.role == 'member' %}
-                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"
-                               {% endif %}>
-                    </div>
-                    <div class="form-group">
-                        <label class="{% if current_user.role == 'member' %}text-white-50 small{% endif %}">
-                            Confirm New Password
-                        </label>
-                        <input type="password" class="form-control" name="confirm_password" required
-                               {% if current_user.role == 'member' %}
-                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"
-                               {% endif %}>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-1"></i> Update Password
-                    </button>
-                </form>
-            </div>
+    <div class="m-card">
+        <div class="m-card-header">
+            <span><i class="fas fa-lock" style="margin-right:8px;color:#F85149;"></i>Change Password</span>
+        </div>
+        <div class="m-card-body">
+            <form method="POST" action="{{ url_for('change_password') }}">
+                <div class="form-group">
+                    <label>Current Password <span style="color:#F85149;">*</span></label>
+                    <input type="password" class="form-control" name="current_password"
+                           required placeholder="Enter current password">
+                </div>
+                <div class="form-group">
+                    <label>New Password <span style="color:#F85149;">*</span></label>
+                    <input type="password" class="form-control" name="new_password"
+                           required placeholder="Enter new password">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password <span style="color:#F85149;">*</span></label>
+                    <input type="password" class="form-control" name="confirm_password"
+                           required placeholder="Repeat new password">
+                </div>
+                <button type="submit" class="m-btn m-btn-primary" style="margin-top:4px;">
+                    <i class="fas fa-save"></i> Update Password
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Account Info -->
-    <div class="col-lg-6 mb-4">
-        <div class="{% if current_user.role == 'member' %}member-card{% else %}card shadow mb-4{% endif %}">
-            <div class="{% if current_user.role == 'member' %}member-card-header{% else %}card-header py-3{% endif %}">
-                {% if current_user.role != 'member' %}<h6 class="m-0 font-weight-bold text-primary">{% endif %}
-                <i class="fas fa-user mr-2"></i>Account Information
-                {% if current_user.role != 'member' %}</h6>{% endif %}
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+        <!-- Account Information -->
+        <div class="m-card">
+            <div class="m-card-header">
+                <span><i class="fas fa-user" style="margin-right:8px;color:#1A73E8;"></i>Account Information</span>
             </div>
-            <div class="{% if current_user.role == 'member' %}member-card-body{% else %}card-body{% endif %}">
-                <table class="table {% if current_user.role == 'member' %}table-dark{% else %}table-bordered{% endif %}">
-                    <tr>
-                        <th>Username</th>
-                        <td>{{ current_user.username }}</td>
-                    </tr>
-                    <tr>
-                        <th>Email</th>
-                        <td>{{ current_user.email }}</td>
-                    </tr>
-                    <tr>
-                        <th>Role</th>
-                        <td><span class="badge badge-primary">{{ current_user.role }}</span></td>
-                    </tr>
-                    <tr>
-                        <th>Member Since</th>
-                        <td>{{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}</td>
-                    </tr>
+            <div style="padding:0;">
+                <table class="m-table">
+                    <tbody>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;width:42%;">Username</td>
+                            <td style="color:#E6EDF3;font-weight:600;">{{ current_user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Email</td>
+                            <td style="color:#C9D1D9;">{{ current_user.email }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Role</td>
+                            <td><span class="m-badge m-badge-primary">Member</span></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Member Since</td>
+                            <td style="color:#C9D1D9;">
+                                {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="m-card">
+            <div class="m-card-header">
+                <span><i class="fas fa-link" style="margin-right:8px;color:#10B981;"></i>Quick Links</span>
+            </div>
+            <div class="m-card-body" style="display:flex;flex-direction:column;gap:8px;">
+                <a href="{{ url_for('my_workouts') }}" class="m-btn m-btn-secondary" style="justify-content:flex-start;">
+                    <i class="fas fa-running" style="color:#1A73E8;width:18px;"></i> My Workouts
+                </a>
+                <a href="{{ url_for('my_progress') }}" class="m-btn m-btn-secondary" style="justify-content:flex-start;">
+                    <i class="fas fa-chart-line" style="color:#10B981;width:18px;"></i> My Progress
+                </a>
+                <a href="{{ url_for('my_payments') }}" class="m-btn m-btn-secondary" style="justify-content:flex-start;">
+                    <i class="fas fa-credit-card" style="color:#8B5CF6;width:18px;"></i> Payments & Membership
+                </a>
+                <a href="{{ url_for('trainer_profiles') }}" class="m-btn m-btn-secondary" style="justify-content:flex-start;">
+                    <i class="fas fa-user-tie" style="color:#F59E0B;width:18px;"></i> Our Trainers
+                </a>
+                <a href="{{ url_for('logout') }}"
+                   style="display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;
+                          background:rgba(248,81,73,0.1);color:#F85149;text-decoration:none;
+                          font-size:0.82rem;font-weight:600;border:1px solid rgba(248,81,73,0.2);
+                          transition:all 0.2s;"
+                   onmouseover="this.style.background='rgba(248,81,73,0.2)'"
+                   onmouseout="this.style.background='rgba(248,81,73,0.1)'">
+                    <i class="fas fa-sign-out-alt" style="width:18px;"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="m-card">
+            <div class="m-card-header">
+                <span><i class="fas fa-info-circle" style="margin-right:8px;color:#8B949E;"></i>System Information</span>
+            </div>
+            <div style="padding:0;">
+                <table class="m-table">
+                    <tbody>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;width:42%;">System</td>
+                            <td style="color:#E6EDF3;">Gym Management System</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Version</td>
+                            <td style="color:#C9D1D9;">1.0.0</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Database</td>
+                            <td><span class="m-badge m-badge-secondary">SQLite</span></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Framework</td>
+                            <td><span class="m-badge m-badge-primary">Flask</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- end right column -->
+</div><!-- end grid -->
+
+{% else %}
+
+<!-- ═══════════════════════ ADMIN / TRAINER SETTINGS ═══════════════════════ -->
+
+<div class="t-grid-2">
+
+    <!-- Change Password -->
+    <div class="t-card">
+        <div class="t-card-header">
+            <span><i class="fas fa-lock" style="margin-right:8px;color:#F85149;"></i>Change Password</span>
+        </div>
+        <div class="t-card-body">
+            <form method="POST" action="{{ url_for('change_password') }}">
+                <div class="t-form-group">
+                    <label>Current Password <span style="color:#F85149;">*</span></label>
+                    <input type="password" class="t-form-control" name="current_password"
+                           required placeholder="Enter current password">
+                </div>
+                <div class="t-form-group">
+                    <label>New Password <span style="color:#F85149;">*</span></label>
+                    <input type="password" class="t-form-control" name="new_password"
+                           required placeholder="Enter new password">
+                </div>
+                <div class="t-form-group">
+                    <label>Confirm New Password <span style="color:#F85149;">*</span></label>
+                    <input type="password" class="t-form-control" name="confirm_password"
+                           required placeholder="Repeat new password">
+                </div>
+                <button type="submit" class="t-btn t-btn-primary" style="margin-top:4px;">
+                    <i class="fas fa-save"></i> Update Password
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+        <!-- Account Info -->
+        <div class="t-card">
+            <div class="t-card-header">
+                <span><i class="fas fa-user" style="margin-right:8px;color:#1A73E8;"></i>Account Information</span>
+            </div>
+            <div class="t-card-body" style="padding:0;">
+                <table class="t-table">
+                    <tbody>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;width:40%;">Username</td>
+                            <td style="color:#E6EDF3;">{{ current_user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Email</td>
+                            <td style="color:#E6EDF3;">{{ current_user.email }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Role</td>
+                            <td>
+                                {% if current_user.role == 'admin' %}
+                                    <span class="t-badge t-badge-warning">Admin</span>
+                                {% elif current_user.role == 'trainer' %}
+                                    <span class="t-badge t-badge-info">Trainer</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Member Since</td>
+                            <td style="color:#C9D1D9;">
+                                {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
 
         <!-- System Info -->
-        <div class="{% if current_user.role == 'member' %}member-card{% else %}card shadow mb-4{% endif %}">
-            <div class="{% if current_user.role == 'member' %}member-card-header{% else %}card-header py-3{% endif %}">
-                {% if current_user.role != 'member' %}<h6 class="m-0 font-weight-bold text-primary">{% endif %}
-                <i class="fas fa-dumbbell mr-2"></i>System Information
-                {% if current_user.role != 'member' %}</h6>{% endif %}
+        <div class="t-card">
+            <div class="t-card-header">
+                <span><i class="fas fa-dumbbell" style="margin-right:8px;color:#10B981;"></i>System Information</span>
             </div>
-            <div class="{% if current_user.role == 'member' %}member-card-body{% else %}card-body{% endif %}">
-                <table class="table {% if current_user.role == 'member' %}table-dark{% else %}table-bordered{% endif %}">
-                    <tr><th>System</th><td>Gym Management System</td></tr>
-                    <tr><th>Version</th><td>1.0.0</td></tr>
-                    <tr><th>Database</th><td>SQLite</td></tr>
-                    <tr><th>Framework</th><td>Python Flask</td></tr>
+            <div class="t-card-body" style="padding:0;">
+                <table class="t-table">
+                    <tbody>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;width:40%;">System</td>
+                            <td style="color:#E6EDF3;">Gym Management System</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Version</td>
+                            <td style="color:#E6EDF3;">1.0.0</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Database</td>
+                            <td><span class="t-badge t-badge-secondary">SQLite</span></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#8B949E;font-weight:600;">Framework</td>
+                            <td><span class="t-badge t-badge-primary">Flask</span></td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-</div>
+    </div><!-- end right column -->
+</div><!-- end t-grid-2 -->
+
+{% endif %}
 
 {% endblock %}

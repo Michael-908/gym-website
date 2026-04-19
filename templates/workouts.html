@@ -1,122 +1,140 @@
 {% extends "base.html" %}
-
 {% block title %}Workouts - Gym Management System{% endblock %}
 
 {% block content %}
 
-<!-- Page Heading -->
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Workouts</h1>
-    <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#addWorkoutModal">
-        <i class="fas fa-plus fa-sm text-white-50"></i> Add Workout
-    </button>
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-running" style="color:#36B9CC;margin-right:8px;"></i>Workouts
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Manage workout plans, assign to members and add trainer comments.</p>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <button class="t-btn t-btn-success" data-toggle="modal" data-target="#assignWorkoutModal">
+            <i class="fas fa-user-plus"></i> Assign to Member
+        </button>
+        <button class="t-btn t-btn-info" data-toggle="modal" data-target="#addWorkoutModal">
+            <i class="fas fa-plus"></i> Add Workout
+        </button>
+    </div>
 </div>
 
 <!-- Workouts Table -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex align-items-center justify-content-between">
-        <h6 class="m-0 font-weight-bold text-primary">All Workouts</h6>
-        <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#assignWorkoutModal">
-            <i class="fas fa-user-plus mr-1"></i> Assign to Member
-        </button>
+<div class="t-card">
+    <div class="t-card-header">
+        <span><i class="fas fa-dumbbell" style="margin-right:8px;color:#36B9CC;"></i>All Workout Plans</span>
+        <span class="t-badge t-badge-info">{{ workouts|length }} plans</span>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Workout Name</th>
-                        <th>Type</th>
-                        <th>Duration</th>
-                        <th>Difficulty</th>
-                        <th>Trainer</th>
-                        <th>Comments</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for workout in workouts %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>
-                            <strong>{{ workout.name }}</strong>
-                            {% if workout.description %}
-                            <div class="text-muted small">{{ workout.description[:60] }}{% if workout.description|length > 60 %}…{% endif %}</div>
-                            {% endif %}
-                        </td>
-                        <td><span class="badge badge-primary">{{ workout.type or 'General' }}</span></td>
-                        <td>{{ workout.duration }} mins</td>
-                        <td>
-                            {% if workout.difficulty == 'Beginner' %}
-                                <span class="badge badge-success">{{ workout.difficulty }}</span>
-                            {% elif workout.difficulty == 'Intermediate' %}
-                                <span class="badge badge-warning">{{ workout.difficulty }}</span>
-                            {% else %}
-                                <span class="badge badge-danger">{{ workout.difficulty or 'N/A' }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ workout.trainer.name if workout.trainer else 'N/A' }}</td>
-                        <td>
-                            <span class="badge badge-info">{{ workout.comments|length }} comment(s)</span>
-                            {% if workout.comments %}
-                            <button class="btn btn-link btn-sm p-0 ml-1" type="button"
-                                    data-toggle="collapse" data-target="#comments-{{ workout.id }}">
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <!-- Comment Button -->
-                            <button class="btn btn-info btn-sm mb-1" data-toggle="modal"
-                                    data-target="#commentModal-{{ workout.id }}"
-                                    title="Add Comment">
+    <div style="overflow-x:auto;">
+        <table class="t-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Workout</th>
+                    <th>Type</th>
+                    <th>Duration</th>
+                    <th>Difficulty</th>
+                    <th>Trainer</th>
+                    <th>Comments</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for workout in workouts %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td>
+                        <div style="font-weight:600;color:#E6EDF3;">{{ workout.name }}</div>
+                        {% if workout.description %}
+                        <div style="font-size:0.75rem;color:#8B949E;margin-top:2px;">
+                            {{ workout.description[:50] }}{% if workout.description|length > 50 %}…{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set type_colors = {'HIIT': 'danger', 'Strength': 'warning', 'Cardio': 'info', 'Flexibility': 'success', 'General': 'secondary'} %}
+                        <span class="t-badge t-badge-{{ type_colors.get(workout.type, 'secondary') }}">{{ workout.type or 'General' }}</span>
+                    </td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">
+                        <i class="fas fa-clock" style="color:#8B949E;margin-right:4px;"></i>{{ workout.duration }} min
+                    </td>
+                    <td>
+                        {% if workout.difficulty == 'Beginner' %}
+                            <span class="t-badge t-badge-success">{{ workout.difficulty }}</span>
+                        {% elif workout.difficulty == 'Intermediate' %}
+                            <span class="t-badge t-badge-warning">{{ workout.difficulty }}</span>
+                        {% elif workout.difficulty == 'Advanced' %}
+                            <span class="t-badge t-badge-danger">{{ workout.difficulty }}</span>
+                        {% else %}
+                            <span class="t-badge t-badge-secondary">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">{{ workout.trainer.name if workout.trainer else '—' }}</td>
+                    <td>
+                        <span class="t-badge t-badge-primary" style="cursor:pointer;"
+                              data-toggle="collapse" data-target="#comments-{{ workout.id }}">
+                            {{ workout.comments|length }} comment(s)
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                            <button class="t-btn t-btn-sm t-btn-info" data-toggle="modal"
+                                    data-target="#commentModal-{{ workout.id }}" title="Add Comment">
                                 <i class="fas fa-comment"></i>
                             </button>
-                            <a href="{{ url_for('edit_workout', id=workout.id) }}"
-                                class="btn btn-warning btn-sm mb-1"><i class="fas fa-edit"></i></a>
+                            <a href="{{ url_for('edit_workout', id=workout.id) }}" class="t-btn t-btn-sm t-btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
                             <a href="{{ url_for('delete_workout', id=workout.id) }}"
-                                class="btn btn-danger btn-sm mb-1"
-                                onclick="return confirm('Delete this workout?')">
+                               class="t-btn t-btn-sm t-btn-danger"
+                               onclick="return confirm('Delete this workout?')">
                                 <i class="fas fa-trash"></i>
                             </a>
-                        </td>
-                    </tr>
-                    <!-- Inline Comments Row -->
-                    {% if workout.comments %}
-                    <tr class="collapse" id="comments-{{ workout.id }}">
-                        <td colspan="8" style="background:#f8f9fc;padding:12px 20px;">
+                        </div>
+                    </td>
+                </tr>
+                <!-- Inline Comments -->
+                {% if workout.comments %}
+                <tr class="collapse" id="comments-{{ workout.id }}">
+                    <td colspan="8" style="padding:0;">
+                        <div style="background:#0D1117;padding:12px 20px;border-bottom:1px solid #30363D;">
                             {% for comment in workout.comments %}
-                            <div style="border-left:3px solid #4e73df;padding:8px 12px;margin-bottom:8px;background:#fff;border-radius:0 6px 6px 0;">
-                                <div class="font-weight-bold text-primary small">
-                                    <i class="fas fa-user-tie mr-1"></i>{{ comment.trainer.name if comment.trainer else 'Trainer' }}
-                                    <span class="text-muted font-weight-normal ml-2">
-                                        {{ comment.created_at.strftime('%d %b %Y %I:%M %p') if comment.created_at else '' }}
+                            <div style="background:#161B22;border-left:3px solid #1A73E8;border-radius:0 6px 6px 0;
+                                        padding:10px 14px;margin-bottom:8px;">
+                                <div style="font-size:0.78rem;font-weight:700;color:#1A73E8;margin-bottom:4px;">
+                                    <i class="fas fa-user-tie" style="margin-right:6px;"></i>
+                                    {{ comment.trainer.name if comment.trainer else 'Trainer' }}
+                                    <span style="color:#8B949E;font-weight:400;margin-left:8px;">
+                                        {{ comment.created_at.strftime('%d %b %Y') if comment.created_at else '' }}
                                     </span>
                                 </div>
-                                <div class="text-gray-700">{{ comment.comment }}</div>
+                                <div style="font-size:0.85rem;color:#C9D1D9;">{{ comment.comment }}</div>
                             </div>
                             {% endfor %}
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% else %}
-                    <tr>
-                        <td colspan="8" class="text-center text-gray-500">No workouts found. Add your first workout!</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align:center;padding:40px;color:#8B949E;">
+                        <i class="fas fa-running" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>
+                        No workouts found. Add your first workout!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
-<!-- ═══ ADD WORKOUT MODAL ═══ -->
+<!-- ADD WORKOUT MODAL -->
 <div class="modal fade" id="addWorkoutModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-running mr-2"></i>Add New Workout</h5>
+                <h5 class="modal-title"><i class="fas fa-running" style="color:#36B9CC;margin-right:8px;"></i>Add New Workout</h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('add_workout') }}">
@@ -124,13 +142,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Workout Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="name" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Workout Name <span style="color:#F85149;">*</span></label>
+                                <input type="text" class="form-control" name="name" required placeholder="e.g. Morning HIIT Blast">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Workout Type <span class="text-danger">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Type <span style="color:#F85149;">*</span></label>
                                 <select class="form-control" name="type" required>
                                     <option value="">Select Type</option>
                                     <option value="HIIT">HIIT</option>
@@ -145,15 +163,15 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label>Duration (minutes) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="duration" min="1" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Duration (min) <span style="color:#F85149;">*</span></label>
+                                <input type="number" class="form-control" name="duration" min="1" required placeholder="45">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label>Difficulty <span class="text-danger">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Difficulty <span style="color:#F85149;">*</span></label>
                                 <select class="form-control" name="difficulty" required>
-                                    <option value="">Select Difficulty</option>
+                                    <option value="">Select Level</option>
                                     <option value="Beginner">Beginner</option>
                                     <option value="Intermediate">Intermediate</option>
                                     <option value="Advanced">Advanced</option>
@@ -162,7 +180,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label>Assign Trainer <span class="text-danger">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Assign Trainer <span style="color:#F85149;">*</span></label>
                                 <select class="form-control" name="trainer_id" required>
                                     <option value="">Select Trainer</option>
                                     {% for trainer in trainers %}
@@ -173,101 +191,92 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Description</label>
-                        <textarea class="form-control" name="description" rows="3"
-                            placeholder="Describe the workout..."></textarea>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Description</label>
+                        <textarea class="form-control" name="description" rows="3" placeholder="Describe the workout routine..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-1"></i> Save Workout
-                    </button>
+                    <button type="button" class="t-btn t-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="t-btn t-btn-info"><i class="fas fa-save"></i> Save Workout</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- ═══ ASSIGN WORKOUT TO MEMBER MODAL ═══ -->
+<!-- ASSIGN WORKOUT MODAL -->
 <div class="modal fade" id="assignWorkoutModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i>Assign Workout to Member</h5>
+                <h5 class="modal-title"><i class="fas fa-user-plus" style="color:#10B981;margin-right:8px;"></i>Assign Workout to Member</h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('assign_workout') }}">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Select Member <span class="text-danger">*</span></label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Select Member <span style="color:#F85149;">*</span></label>
                         <select class="form-control" name="member_id" required>
                             <option value="">Choose a member...</option>
                             {% for member in members %}
-                            <option value="{{ member.id }}">{{ member.name }}
-                                {% if member.goal %}— {{ member.goal }}{% endif %}
-                            </option>
+                            <option value="{{ member.id }}">{{ member.name }}{% if member.goal %} — {{ member.goal }}{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Select Workout <span class="text-danger">*</span></label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Select Workout <span style="color:#F85149;">*</span></label>
                         <select class="form-control" name="workout_id" required>
                             <option value="">Choose a workout...</option>
                             {% for workout in workouts %}
-                            <option value="{{ workout.id }}">{{ workout.name }} ({{ workout.type }}, {{ workout.duration }} mins)</option>
+                            <option value="{{ workout.id }}">{{ workout.name }} ({{ workout.type }}, {{ workout.duration }} min)</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check mr-1"></i> Assign
-                    </button>
+                    <button type="button" class="t-btn t-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="t-btn t-btn-success"><i class="fas fa-check"></i> Assign</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- ═══ COMMENT MODALS (one per workout) ═══ -->
+<!-- COMMENT MODALS -->
 {% for workout in workouts %}
 <div class="modal fade" id="commentModal-{{ workout.id }}" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-comment mr-2 text-info"></i>Comment on "{{ workout.name }}"
+                    <i class="fas fa-comment" style="color:#36B9CC;margin-right:8px;"></i>
+                    Comment on "{{ workout.name }}"
                 </h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('comment_workout', workout_id=workout.id) }}">
                 <div class="modal-body">
-                    <!-- Existing comments preview -->
                     {% if workout.comments %}
-                    <div class="mb-3">
-                        <h6 class="text-muted small text-uppercase">Previous Comments</h6>
+                    <div style="margin-bottom:16px;">
+                        <p style="font-size:0.75rem;color:#8B949E;text-transform:uppercase;font-weight:700;margin-bottom:8px;">Previous Comments</p>
                         {% for comment in workout.comments %}
-                        <div style="border-left:3px solid #36b9cc;padding:6px 10px;margin-bottom:6px;
-                                    background:#f8f9fc;border-radius:0 4px 4px 0;">
-                            <div class="font-weight-bold small text-info">{{ comment.trainer.name if comment.trainer else 'Trainer' }}</div>
-                            <div class="small text-gray-700">{{ comment.comment }}</div>
+                        <div style="border-left:3px solid #36B9CC;padding:8px 12px;margin-bottom:8px;
+                                    background:#0D1117;border-radius:0 4px 4px 0;font-size:0.82rem;">
+                            <div style="font-weight:700;color:#36B9CC;margin-bottom:2px;">{{ comment.trainer.name if comment.trainer else 'Trainer' }}</div>
+                            <div style="color:#C9D1D9;">{{ comment.comment }}</div>
                         </div>
                         {% endfor %}
                     </div>
                     {% endif %}
                     <div class="form-group">
-                        <label>Your Comment <span class="text-danger">*</span></label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Your Comment <span style="color:#F85149;">*</span></label>
                         <textarea class="form-control" name="comment" rows="4" required
-                            placeholder="Write feedback or notes for this workout..."></textarea>
+                            placeholder="Write feedback or coaching notes..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info">
-                        <i class="fas fa-paper-plane mr-1"></i> Post Comment
-                    </button>
+                    <button type="button" class="t-btn t-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="t-btn t-btn-info"><i class="fas fa-paper-plane"></i> Post Comment</button>
                 </div>
             </form>
         </div>

@@ -3,84 +3,126 @@
 
 {% block content %}
 
+<div style="margin-bottom:24px;">
+    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+        <i class="fas fa-credit-card" style="color:#8B5CF6;margin-right:8px;"></i>My Payments
+    </h4>
+    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Membership plans, payment history and renewal.</p>
+</div>
+
+<!-- Membership Status Alert -->
+{% if latest_payment %}
+{% set days_left = (latest_payment.expiry_date - today).days if latest_payment.expiry_date else -1 %}
+{% if days_left > 7 %}
+<div class="alert alert-success" style="margin-bottom:20px;">
+    <span><i class="fas fa-check-circle" style="margin-right:8px;"></i>
+    Your membership is <strong>active</strong> — <strong>{{ days_left }} days remaining</strong>
+    (expires {{ latest_payment.expiry_date.strftime('%d %b %Y') }})
+    </span>
+</div>
+{% elif days_left > 0 %}
+<div class="alert alert-warning" style="margin-bottom:20px;">
+    <span><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>
+    Membership expiring soon — only <strong>{{ days_left }} days left!</strong> Renew below.
+    </span>
+</div>
+{% else %}
+<div class="alert alert-danger" style="margin-bottom:20px;">
+    <span><i class="fas fa-times-circle" style="margin-right:8px;"></i>
+    Your membership has <strong>expired</strong>. Please renew to continue using the gym.
+    </span>
+</div>
+{% endif %}
+{% endif %}
+
 <!-- Membership Plans -->
-<div class="member-card mb-4">
-    <div class="member-card-header">
-        <i class="fas fa-credit-card mr-2"></i>Membership Plans
+<div class="m-card" style="margin-bottom:24px;">
+    <div class="m-card-header">
+        <span><i class="fas fa-id-card" style="margin-right:8px;color:#8B5CF6;"></i>Available Membership Plans</span>
     </div>
-    <div class="member-card-body">
-        <div class="row">
+    <div class="m-card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
             {% for plan in plans %}
-            <div class="col-md-4 mb-3">
-                <div style="background:#21262D;border:1px solid #30363D;border-radius:12px;padding:20px;text-align:center;">
-                    <h5 class="text-white mb-2">{{ plan.name }}</h5>
-                    <div class="h3 mb-1" style="color:#1A73E8;">KSh {{ "%.2f"|format(plan.price) }}</div>
-                    <div class="text-white-50 small mb-3">{{ plan.duration_days }} days</div>
-                    <form method="POST" action="{{ url_for('stripe_payment', plan_id=plan.id) }}">
-                        <button type="submit" class="btn btn-success btn-block btn-sm">
-                            <i class="fas fa-credit-card mr-1"></i> Pay with Stripe
-                        </button>
-                    </form>
+            <div style="background:#0D1117;border:1px solid #30363D;border-radius:12px;
+                        padding:24px;text-align:center;transition:border-color 0.2s;"
+                 onmouseover="this.style.borderColor='#8B5CF6'" onmouseout="this.style.borderColor='#30363D'">
+                <div style="font-weight:700;color:#E6EDF3;font-size:0.95rem;margin-bottom:8px;">{{ plan.name }}</div>
+                <div style="font-size:1.8rem;font-weight:800;color:#8B5CF6;margin-bottom:4px;">
+                    KSh {{ "%.0f"|format(plan.price) }}
                 </div>
+                <div style="font-size:0.8rem;color:#8B949E;margin-bottom:20px;">{{ plan.duration_days }} days access</div>
+                <form method="POST" action="{{ url_for('stripe_payment', plan_id=plan.id) }}">
+                    <button type="submit" class="m-btn m-btn-success" style="width:100%;justify-content:center;">
+                        <i class="fas fa-credit-card"></i> Pay with Stripe
+                    </button>
+                </form>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
-<!-- Membership Status -->
-{% if latest_payment %}
-<div class="member-card mb-4">
-    <div class="member-card-header"><i class="fas fa-id-card mr-2"></i>Membership Status</div>
-    <div class="member-card-body">
-        {% set days_left = (latest_payment.expiry_date - today).days if latest_payment.expiry_date else -1 %}
-        {% if days_left > 7 %}
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle mr-2"></i>
-                Active membership — <strong>{{ days_left }} days remaining</strong>
-                (expires {{ latest_payment.expiry_date.strftime('%d %b %Y') }})
-            </div>
-        {% elif days_left > 0 %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                Expiring soon — only <strong>{{ days_left }} days left!</strong>
-            </div>
-        {% else %}
-            <div class="alert alert-danger">
-                <i class="fas fa-times-circle mr-2"></i>
-                Membership <strong>expired</strong>. Please renew above.
-            </div>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-
 <!-- Payment History -->
-<div class="member-card mb-4">
-    <div class="member-card-header"><i class="fas fa-history mr-2"></i>Payment History</div>
-    <div class="member-card-body">
+<div class="m-card">
+    <div class="m-card-header">
+        <span><i class="fas fa-history" style="margin-right:8px;color:#10B981;"></i>Payment History</span>
+        <span class="m-badge m-badge-success">{{ payments|length }} records</span>
+    </div>
+    <div style="overflow-x:auto;">
         {% if payments %}
-            {% for payment in payments %}
-            <div class="member-list-item">
-                <div class="flex-grow-1">
-                    <div class="font-weight-bold text-white">KSh {{ "%.2f"|format(payment.amount) }}</div>
-                    <div class="text-white-50 small">
-                        {{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}
-                        &nbsp;·&nbsp; {{ payment.method|upper if payment.method else 'N/A' }}
-                        {% if payment.expiry_date %}
-                        &nbsp;·&nbsp; Expires: {{ payment.expiry_date.strftime('%d %b %Y') }}
+        <table class="m-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Payment Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td>
+                        <span style="color:#10B981;font-weight:700;">KSh {{ "%.2f"|format(payment.amount) }}</span>
+                    </td>
+                    <td>
+                        {% if payment.method == 'mpesa' %}
+                            <span class="m-badge m-badge-success"><i class="fas fa-mobile-alt" style="margin-right:4px;"></i>M-Pesa</span>
+                        {% elif payment.method == 'cash' %}
+                            <span class="m-badge m-badge-primary"><i class="fas fa-money-bill" style="margin-right:4px;"></i>Cash</span>
+                        {% elif payment.method in ['stripe', 'card'] %}
+                            <span class="m-badge m-badge-info"><i class="fas fa-credit-card" style="margin-right:4px;"></i>
+                            {{ 'Stripe' if payment.method == 'stripe' else 'Card' }}</span>
+                        {% else %}
+                            <span class="m-badge m-badge-secondary">{{ payment.method|upper if payment.method else 'N/A' }}</span>
                         {% endif %}
-                    </div>
-                </div>
-                <span class="badge badge-{{ 'success' if payment.status == 'completed' else 'warning' }}">
-                    {{ payment.status }}
-                </span>
-            </div>
-            {% endfor %}
+                    </td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">
+                        {{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}
+                    </td>
+                    <td style="font-size:0.82rem;">
+                        {% if payment.expiry_date %}
+                        <span style="color:#C9D1D9;">{{ payment.expiry_date.strftime('%d %b %Y') }}</span>
+                        {% else %}
+                        <span style="color:#8B949E;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="m-badge m-badge-{{ 'success' if payment.status == 'completed' else 'warning' }}">
+                            {{ payment.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-        <div class="text-center text-white-50 py-4">
-            <i class="fas fa-receipt fa-2x mb-2"></i>
-            <p>No payment history yet.</p>
+        <div style="padding:60px;text-align:center;color:#8B949E;">
+            <i class="fas fa-receipt" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
+            <p>No payment history yet. Choose a membership plan above to get started.</p>
         </div>
         {% endif %}
     </div>

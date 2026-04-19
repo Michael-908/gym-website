@@ -1,33 +1,37 @@
 {% extends "base.html" %}
-
 {% block title %}Edit Workout - Gym Management System{% endblock %}
 
 {% block content %}
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Edit Workout</h1>
-    <a href="{{ url_for('workouts') }}" class="btn btn-secondary btn-sm">
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-edit" style="color:#36B9CC;margin-right:8px;"></i>Edit Workout
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Update workout details and assignments.</p>
+    </div>
+    <a href="{{ url_for('workouts') }}" class="t-btn t-btn-secondary">
         <i class="fas fa-arrow-left"></i> Back to Workouts
     </a>
 </div>
 
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Edit Workout Details</h6>
+<div class="t-card" style="max-width:720px;">
+    <div class="t-card-header">
+        <span><i class="fas fa-dumbbell" style="margin-right:8px;color:#36B9CC;"></i>{{ workout.name }}</span>
+        <span class="t-badge t-badge-info">{{ workout.type or 'General' }}</span>
     </div>
-    <div class="card-body">
+    <div class="t-card-body">
         <form method="POST" action="{{ url_for('edit_workout', id=workout.id) }}">
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Workout Name</label>
-                        <input type="text" class="form-control" name="name"
-                            value="{{ workout.name }}" required>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Workout Name</label>
+                        <input type="text" class="form-control" name="name" value="{{ workout.name }}" required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Workout Type</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Type</label>
                         <select class="form-control" name="type">
                             <option value="HIIT" {% if workout.type == 'HIIT' %}selected{% endif %}>HIIT</option>
                             <option value="Strength" {% if workout.type == 'Strength' %}selected{% endif %}>Strength</option>
@@ -41,14 +45,13 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label>Duration (minutes)</label>
-                        <input type="number" class="form-control" name="duration"
-                            value="{{ workout.duration }}" min="1" required>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Duration (min)</label>
+                        <input type="number" class="form-control" name="duration" value="{{ workout.duration }}" min="1" required>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label>Difficulty</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Difficulty</label>
                         <select class="form-control" name="difficulty">
                             <option value="Beginner" {% if workout.difficulty == 'Beginner' %}selected{% endif %}>Beginner</option>
                             <option value="Intermediate" {% if workout.difficulty == 'Intermediate' %}selected{% endif %}>Intermediate</option>
@@ -58,31 +61,24 @@
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label>Assign Trainer</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Trainer</label>
                         <select class="form-control" name="trainer_id">
+                            <option value="">No Trainer</option>
                             {% for trainer in trainers %}
-                            <option value="{{ trainer.id }}"
-                                {% if workout.trainer_id == trainer.id %}selected{% endif %}>
-                                {{ trainer.name }}
-                            </option>
+                            <option value="{{ trainer.id }}" {% if workout.trainer_id == trainer.id %}selected{% endif %}>{{ trainer.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea class="form-control" name="description"
-                            rows="3">{{ workout.description }}</textarea>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Description</label>
+                <textarea class="form-control" name="description" rows="3">{{ workout.description or '' }}</textarea>
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save mr-1"></i> Update Workout
-            </button>
-            <a href="{{ url_for('workouts') }}" class="btn btn-secondary">Cancel</a>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+                <button type="submit" class="t-btn t-btn-warning"><i class="fas fa-save"></i> Update Workout</button>
+                <a href="{{ url_for('workouts') }}" class="t-btn t-btn-secondary">Cancel</a>
+            </div>
         </form>
     </div>
 </div>

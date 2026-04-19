@@ -3,65 +3,138 @@
 
 {% block content %}
 
-<div style="margin-bottom:20px;">
-    <h4 class="text-white mb-1"><i class="fas fa-user-tie mr-2" style="color:#1A73E8;"></i>Our Trainers</h4>
-    <p class="text-white-50 small">Meet the team dedicated to your fitness journey.</p>
+<div style="margin-bottom:24px;">
+    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+        <i class="fas fa-user-tie" style="color:#F59E0B;margin-right:8px;"></i>Our Trainers
+    </h4>
+    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Meet the team dedicated to your fitness journey.</p>
 </div>
 
 {% if trainers %}
-<div class="row">
+
+<!-- Trainer Cards Grid -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px;">
     {% for trainer in trainers %}
-    <div class="col-md-6 mb-4">
-        <div class="member-card">
-            <div class="member-card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <!-- Avatar -->
-                    <div style="width:56px;height:56px;border-radius:50%;
-                                background:linear-gradient(135deg,#1A73E8,#8B5CF6);
-                                display:flex;align-items:center;justify-content:center;
-                                font-size:1.4rem;font-weight:800;color:#fff;
-                                flex-shrink:0;margin-right:14px;">
-                        {{ trainer.name[0].upper() }}
-                    </div>
-                    <div>
-                        <div class="font-weight-bold text-white" style="font-size:1.05rem;">
-                            {{ trainer.name }}
-                        </div>
-                        <div>
-                            <span class="badge badge-primary">{{ trainer.specialization or 'General Fitness' }}</span>
-                        </div>
-                    </div>
+    <div class="m-card" style="transition:border-color 0.2s;"
+         onmouseover="this.style.borderColor='#F59E0B'" onmouseout="this.style.borderColor='#30363D'">
+        <div style="padding:22px;">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+                <div style="width:56px;height:56px;border-radius:50%;
+                    background:linear-gradient(135deg,
+                    {% if loop.index % 4 == 0 %}#1A73E8,#8B5CF6
+                    {% elif loop.index % 4 == 1 %}#10B981,#1A73E8
+                    {% elif loop.index % 4 == 2 %}#F59E0B,#F85149
+                    {% else %}#8B5CF6,#F85149{% endif %});
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:1.4rem;font-weight:800;color:#fff;flex-shrink:0;">
+                    {{ trainer.name[0].upper() }}
                 </div>
-
-                {% if trainer.bio %}
-                <p class="text-white-50 small mb-3">{{ trainer.bio }}</p>
-                {% endif %}
-
-                <div class="text-white-50 small">
-                    {% if trainer.email %}
-                    <div class="mb-1">
-                        <i class="fas fa-envelope mr-2" style="color:#1A73E8;"></i>{{ trainer.email }}
-                    </div>
-                    {% endif %}
-                    {% if trainer.phone %}
-                    <div class="mb-1">
-                        <i class="fas fa-phone mr-2" style="color:#10B981;"></i>{{ trainer.phone }}
-                    </div>
-                    {% endif %}
-                    <div>
-                        <i class="fas fa-dumbbell mr-2" style="color:#F59E0B;"></i>
-                        {{ trainer.classes|length }} class(es) running
-                    </div>
+                <div>
+                    <div style="font-weight:700;color:#E6EDF3;font-size:0.95rem;margin-bottom:4px;">{{ trainer.name }}</div>
+                    <span class="m-badge m-badge-primary">{{ trainer.specialization or 'General Fitness' }}</span>
                 </div>
             </div>
+
+            <!-- Bio -->
+            {% if trainer.bio %}
+            <p style="font-size:0.82rem;color:#8B949E;margin-bottom:14px;line-height:1.6;
+                       border-left:2px solid #30363D;padding-left:10px;">
+                {{ trainer.bio[:120] }}{% if trainer.bio|length > 120 %}…{% endif %}
+            </p>
+            {% endif %}
+
+            <!-- Info -->
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;color:#8B949E;margin-bottom:14px;">
+                {% if trainer.email %}
+                <div><i class="fas fa-envelope" style="width:16px;color:#1A73E8;margin-right:6px;"></i>{{ trainer.email }}</div>
+                {% endif %}
+                {% if trainer.phone %}
+                <div><i class="fas fa-phone" style="width:16px;color:#10B981;margin-right:6px;"></i>{{ trainer.phone }}</div>
+                {% endif %}
+                <div>
+                    <i class="fas fa-calendar-alt" style="width:16px;color:#F59E0B;margin-right:6px;"></i>
+                    {{ trainer.classes|length }} class(es) running
+                </div>
+            </div>
+
+            <!-- Classes Preview -->
+            {% if trainer.classes %}
+            <div style="background:#21262D;border-radius:8px;padding:10px 12px;">
+                <div style="font-size:0.68rem;font-weight:800;color:rgba(255,255,255,0.3);
+                            text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Classes</div>
+                {% for cls in trainer.classes[:2] %}
+                <div style="font-size:0.8rem;color:#C9D1D9;margin-bottom:3px;">
+                    <i class="fas fa-dot-circle" style="color:#F59E0B;margin-right:6px;font-size:0.5rem;"></i>
+                    {{ cls.name }}
+                    {% if cls.schedule %}
+                    <span style="color:#8B949E;font-size:0.72rem;margin-left:4px;">
+                        · {{ cls.schedule.strftime('%d %b, %I:%M %p') }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if trainer.classes|length > 2 %}
+                <div style="font-size:0.75rem;color:#8B949E;margin-top:4px;">
+                    + {{ trainer.classes|length - 2 }} more class(es)
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 </div>
+
+<!-- Also show as table -->
+<div class="m-card">
+    <div class="m-card-header">
+        <span><i class="fas fa-table" style="margin-right:8px;color:#F59E0B;"></i>Trainer Directory</span>
+        <span class="m-badge m-badge-warning">{{ trainers|length }} trainers</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="m-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Trainer</th>
+                    <th>Specialization</th>
+                    <th>Contact</th>
+                    <th>Classes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trainer in trainers %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="m-avatar" style="background:linear-gradient(135deg,#1A73E8,#8B5CF6);">
+                                {{ trainer.name[0].upper() }}
+                            </div>
+                            <span style="font-weight:600;color:#E6EDF3;">{{ trainer.name }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="m-badge m-badge-primary">{{ trainer.specialization or 'General Fitness' }}</span>
+                    </td>
+                    <td style="font-size:0.82rem;color:#C9D1D9;">
+                        {% if trainer.email %}{{ trainer.email }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <span class="m-badge m-badge-info">{{ trainer.classes|length }} class(es)</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% else %}
-<div class="member-card">
-    <div class="member-card-body text-center text-white-50 py-4">
-        <i class="fas fa-user-slash fa-2x mb-2"></i>
+<div class="m-card">
+    <div style="padding:60px;text-align:center;color:#8B949E;">
+        <i class="fas fa-user-slash" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
         <p>No trainers available yet.</p>
     </div>
 </div>

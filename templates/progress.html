@@ -1,106 +1,136 @@
 {% extends "base.html" %}
-
 {% block title %}Progress - Gym Management System{% endblock %}
 
 {% block content %}
 
-<!-- Page Heading -->
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Progress Tracking</h1>
-    <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#addProgressModal">
-        <i class="fas fa-plus fa-sm text-white-50"></i> Add Progress Record
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-chart-line" style="color:#10B981;margin-right:8px;"></i>Progress Tracking
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Monitor member weight, BMI and strength improvements over time.</p>
+    </div>
+    <button class="t-btn t-btn-success" data-toggle="modal" data-target="#addProgressModal">
+        <i class="fas fa-plus"></i> Add Record
     </button>
 </div>
 
-<!-- Progress Table -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Member Progress Records</h6>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Member</th>
-                        <th>Weight (kg)</th>
-                        <th>BMI</th>
-                        <th>Strength Score</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in progress %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ record.member.name if record.member else 'N/A' }}</td>
-                        <td>{{ record.weight }} kg</td>
-                        <td>
-                            {% if record.bmi %}
-                                {% if record.bmi < 18.5 %}
-                                    <span class="badge badge-warning">{{ "%.1f"|format(record.bmi) }} Underweight</span>
-                                {% elif record.bmi < 25 %}
-                                    <span class="badge badge-success">{{ "%.1f"|format(record.bmi) }} Normal</span>
-                                {% elif record.bmi < 30 %}
-                                    <span class="badge badge-warning">{{ "%.1f"|format(record.bmi) }} Overweight</span>
-                                {% else %}
-                                    <span class="badge badge-danger">{{ "%.1f"|format(record.bmi) }} Obese</span>
-                                {% endif %}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </td>
-                        <td>{{ record.strength_score }}</td>
-                        <td>{{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}</td>
-                        <td>
-                            <a href="{{ url_for('delete_progress', id=record.id) }}"
-                                class="btn btn-danger btn-sm"
-                                onclick="return confirm('Delete this progress record?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-gray-500">No progress records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Progress Chart -->
 {% if progress %}
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Weight Progress Chart</h6>
+<!-- Weight Chart -->
+<div class="t-card" style="margin-bottom:20px;">
+    <div class="t-card-header">
+        <span><i class="fas fa-chart-area" style="margin-right:8px;color:#10B981;"></i>Weight Progress Chart</span>
     </div>
-    <div class="card-body">
-        <canvas id="progressChart" height="100"></canvas>
+    <div class="t-card-body">
+        <canvas id="progressChart" height="80"></canvas>
     </div>
 </div>
 {% endif %}
+
+<!-- Progress Table -->
+<div class="t-card">
+    <div class="t-card-header">
+        <span><i class="fas fa-table" style="margin-right:8px;color:#10B981;"></i>Member Progress Records</span>
+        <span class="t-badge t-badge-success">{{ progress|length }} records</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="t-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Weight</th>
+                    <th>BMI</th>
+                    <th>BMI Category</th>
+                    <th>Strength Score</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in progress %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">
+                                {{ record.member.name[0].upper() if record.member else '?' }}
+                            </div>
+                            <span style="color:#E6EDF3;font-weight:600;">{{ record.member.name if record.member else 'N/A' }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="color:#E6EDF3;font-weight:700;">{{ record.weight }}</span>
+                        <span style="color:#8B949E;font-size:0.75rem;"> kg</span>
+                    </td>
+                    <td>
+                        {% if record.bmi %}
+                        <span style="color:#E6EDF3;font-weight:700;">{{ "%.1f"|format(record.bmi) }}</span>
+                        {% else %}
+                        <span style="color:#8B949E;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.bmi %}
+                            {% if record.bmi < 18.5 %}
+                                <span class="t-badge t-badge-warning">Underweight</span>
+                            {% elif record.bmi < 25 %}
+                                <span class="t-badge t-badge-success">Normal</span>
+                            {% elif record.bmi < 30 %}
+                                <span class="t-badge t-badge-warning">Overweight</span>
+                            {% else %}
+                                <span class="t-badge t-badge-danger">Obese</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color:#8B949E;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.strength_score %}
+                        <span style="color:#8B5CF6;font-weight:600;">{{ record.strength_score }}</span>
+                        <span style="color:#8B949E;font-size:0.75rem;"> kg</span>
+                        {% else %}
+                        <span style="color:#8B949E;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">
+                        {{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('delete_progress', id=record.id) }}"
+                           class="t-btn t-btn-sm t-btn-danger"
+                           onclick="return confirm('Delete this record?')">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align:center;padding:40px;color:#8B949E;">
+                        <i class="fas fa-chart-line" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>
+                        No progress records yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <!-- Add Progress Modal -->
 <div class="modal fade" id="addProgressModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-chart-line mr-2"></i>Add Progress Record</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <h5 class="modal-title"><i class="fas fa-chart-line" style="color:#10B981;margin-right:8px;"></i>Add Progress Record</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('add_progress') }}">
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Member <span class="text-danger">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Member <span style="color:#F85149;">*</span></label>
                                 <select class="form-control" name="member_id" required>
                                     <option value="">Select Member</option>
                                     {% for member in members %}
@@ -111,35 +141,30 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Weight (kg) <span class="text-danger">*</span></label>
-                                <input type="number" step="0.1" class="form-control"
-                                    name="weight" min="0" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Weight (kg) <span style="color:#F85149;">*</span></label>
+                                <input type="number" step="0.1" class="form-control" name="weight" min="0" required placeholder="75.5">
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Height (cm) — used to calculate BMI <span class="text-danger">*</span></label>
-                                <input type="number" step="0.1" class="form-control"
-                                    name="height" min="0" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Height (cm) — for BMI <span style="color:#F85149;">*</span></label>
+                                <input type="number" step="0.1" class="form-control" name="height" min="0" required placeholder="175">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Strength Score</label>
-                                <input type="number" step="0.1" class="form-control"
-                                    name="strength_score" min="0"
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Strength Score (optional)</label>
+                                <input type="number" step="0.1" class="form-control" name="strength_score" min="0"
                                     placeholder="e.g. max bench press in kg">
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-1"></i> Save Record
-                    </button>
+                    <button type="button" class="t-btn t-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="t-btn t-btn-success"><i class="fas fa-save"></i> Save Record</button>
                 </div>
             </form>
         </div>
@@ -152,27 +177,30 @@
 {% if progress %}
 <script src="{{ url_for('static', filename='vendor/chart.js/Chart.min.js') }}"></script>
 <script>
-    var ctx = document.getElementById('progressChart').getContext('2d');
-    var progressChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [{% for record in progress %}"{{ record.date.strftime('%d %b') }}"{% if not loop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                label: 'Weight (kg)',
-                data: [{% for record in progress %}{{ record.weight }}{% if not loop.last %},{% endif %}{% endfor %}],
-                borderColor: '#1A73E8',
-                backgroundColor: 'rgba(26, 115, 232, 0.1)',
-                borderWidth: 2,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                yAxes: [{ ticks: { beginAtZero: false } }]
-            }
+var ctx = document.getElementById('progressChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [{% for record in progress %}"{{ record.date.strftime('%d %b') if record.date else '' }}"{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Weight (kg)',
+            data: [{% for record in progress %}{{ record.weight }}{% if not loop.last %},{% endif %}{% endfor %}],
+            borderColor: '#10B981',
+            backgroundColor: 'rgba(16,185,129,0.08)',
+            borderWidth: 2, fill: true, tension: 0.4,
+            pointBackgroundColor: '#10B981',
+            pointRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#8B949E' } } },
+        scales: {
+            x: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } },
+            y: { ticks: { color: '#8B949E', beginAtZero: false }, grid: { color: '#21262D' } }
         }
-    });
+    }
+});
 </script>
 {% endif %}
 {% endblock %}

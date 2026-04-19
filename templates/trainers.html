@@ -1,105 +1,168 @@
 {% extends "base.html" %}
-
 {% block title %}Trainers - Gym Management System{% endblock %}
 
 {% block content %}
 
-<!-- Page Heading -->
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Trainers</h1>
-    <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#addTrainerModal">
-        <i class="fas fa-user-plus fa-sm text-white-50"></i> Add Trainer
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-user-tie" style="color:#F59E0B;margin-right:8px;"></i>Trainers
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Manage trainer profiles, specializations and access.</p>
+    </div>
+    <button class="t-btn t-btn-warning" data-toggle="modal" data-target="#addTrainerModal">
+        <i class="fas fa-user-plus"></i> Add Trainer
     </button>
 </div>
 
-<!-- Trainers Table -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">All Trainers</h6>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Specialization</th>
-                        <th>Bio</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for trainer in trainers %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ trainer.name }}</td>
-                        <td>{{ trainer.email }}</td>
-                        <td>{{ trainer.phone }}</td>
-                        <td>
-                            <span class="badge badge-primary">{{ trainer.specialization }}</span>
-                        </td>
-                        <td>{{ trainer.bio }}</td>
-                        <td>
-                            <a href="{{ url_for('edit_trainer', id=trainer.id) }}" class="btn btn-warning btn-sm">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{{ url_for('delete_trainer', id=trainer.id) }}"
-                                class="btn btn-danger btn-sm"
-                                onclick="return confirm('Are you sure you want to delete this trainer?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-gray-500">No trainers found. Add your first trainer!</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<!-- Trainer Cards Grid -->
+{% if trainers %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px;">
+    {% for trainer in trainers %}
+    <div class="t-card" style="transition:border-color 0.2s;" onmouseover="this.style.borderColor='#1A73E8'" onmouseout="this.style.borderColor='#30363D'">
+        <div style="padding:20px;">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+                <div style="width:52px;height:52px;border-radius:50%;
+                    background:linear-gradient(135deg,
+                    {% if loop.index % 4 == 0 %}#1A73E8,#8B5CF6
+                    {% elif loop.index % 4 == 1 %}#10B981,#1A73E8
+                    {% elif loop.index % 4 == 2 %}#F59E0B,#F85149
+                    {% else %}#8B5CF6,#F85149{% endif %});
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:1.3rem;font-weight:800;color:#fff;flex-shrink:0;">
+                    {{ trainer.name[0].upper() }}
+                </div>
+                <div>
+                    <div style="font-weight:700;color:#E6EDF3;font-size:0.95rem;">{{ trainer.name }}</div>
+                    <span class="t-badge t-badge-primary" style="margin-top:3px;">{{ trainer.specialization or 'General Fitness' }}</span>
+                </div>
+            </div>
+            <!-- Info -->
+            <div style="font-size:0.82rem;color:#8B949E;display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+                {% if trainer.email %}
+                <div><i class="fas fa-envelope" style="width:16px;color:#1A73E8;"></i> {{ trainer.email }}</div>
+                {% endif %}
+                {% if trainer.phone %}
+                <div><i class="fas fa-phone" style="width:16px;color:#10B981;"></i> {{ trainer.phone }}</div>
+                {% endif %}
+                <div><i class="fas fa-calendar-alt" style="width:16px;color:#F59E0B;"></i> {{ trainer.classes|length }} class(es) scheduled</div>
+            </div>
+            {% if trainer.bio %}
+            <p style="font-size:0.8rem;color:#8B949E;margin-bottom:14px;line-height:1.5;border-left:2px solid #30363D;padding-left:10px;">
+                {{ trainer.bio[:100] }}{% if trainer.bio|length > 100 %}…{% endif %}
+            </p>
+            {% endif %}
+            <!-- Actions -->
+            <div style="display:flex;gap:8px;">
+                <a href="{{ url_for('edit_trainer', id=trainer.id) }}" class="t-btn t-btn-sm t-btn-warning" style="flex:1;justify-content:center;">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{{ url_for('delete_trainer', id=trainer.id) }}"
+                   class="t-btn t-btn-sm t-btn-danger" style="flex:1;justify-content:center;"
+                   onclick="return confirm('Delete {{ trainer.name }}?')">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
         </div>
     </div>
+    {% endfor %}
 </div>
+{% else %}
+<div class="t-card">
+    <div style="padding:60px;text-align:center;color:#8B949E;">
+        <i class="fas fa-user-tie" style="font-size:3rem;margin-bottom:16px;display:block;opacity:0.2;"></i>
+        <p style="margin-bottom:16px;">No trainers yet. Add your first trainer!</p>
+        <button class="t-btn t-btn-warning" data-toggle="modal" data-target="#addTrainerModal">
+            <i class="fas fa-plus"></i> Add Trainer
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Also a compact table view -->
+{% if trainers %}
+<div class="t-card">
+    <div class="t-card-header">
+        <span><i class="fas fa-table" style="margin-right:8px;color:#F59E0B;"></i>Trainers Directory</span>
+        <span class="t-badge t-badge-warning">{{ trainers|length }} trainers</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="t-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Specialization</th>
+                    <th>Classes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trainer in trainers %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">{{ trainer.name[0].upper() }}</div>
+                            <span style="color:#E6EDF3;font-weight:600;">{{ trainer.name }}</span>
+                        </div>
+                    </td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">{{ trainer.email }}</td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">{{ trainer.phone or '—' }}</td>
+                    <td><span class="t-badge t-badge-primary">{{ trainer.specialization or 'General' }}</span></td>
+                    <td><span class="t-badge t-badge-info">{{ trainer.classes|length }}</span></td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <a href="{{ url_for('edit_trainer', id=trainer.id) }}" class="t-btn t-btn-sm t-btn-warning"><i class="fas fa-edit"></i></a>
+                            <a href="{{ url_for('delete_trainer', id=trainer.id) }}" class="t-btn t-btn-sm t-btn-danger"
+                               onclick="return confirm('Delete {{ trainer.name }}?')"><i class="fas fa-trash"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <!-- Add Trainer Modal -->
 <div class="modal fade" id="addTrainerModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i>Add New Trainer</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <h5 class="modal-title"><i class="fas fa-user-tie" style="color:#F59E0B;margin-right:8px;"></i>Add New Trainer</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('add_trainer') }}">
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Full Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="name" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Full Name <span style="color:#F85149;">*</span></label>
+                                <input type="text" class="form-control" name="name" required placeholder="e.g. John Kamau">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Email Address <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" name="email" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Email Address <span style="color:#F85149;">*</span></label>
+                                <input type="email" class="form-control" name="email" required placeholder="trainer@gym.com">
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Phone Number</label>
-                                <input type="text" class="form-control" name="phone">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Phone</label>
+                                <input type="text" class="form-control" name="phone" placeholder="+254 7XX XXX XXX">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Specialization <span class="text-danger">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Specialization <span style="color:#F85149;">*</span></label>
                                 <select class="form-control" name="specialization" required>
                                     <option value="">Select Specialization</option>
                                     <option value="HIIT">HIIT</option>
@@ -115,26 +178,24 @@
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label>Bio</label>
-                                <textarea class="form-control" name="bio" rows="3"
-                                    placeholder="Brief description about the trainer..."></textarea>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Bio</label>
+                                <textarea class="form-control" name="bio" rows="3" placeholder="Brief description about the trainer..."></textarea>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label>Password <span class="text-danger">*</span></label>
-                                <input type="password" class="form-control" name="password"
-                                    placeholder="Create a password for this trainer" required>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Password <span style="color:#F85149;">*</span></label>
+                                <input type="password" class="form-control" name="password" required placeholder="Create a login password">
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-1"></i> Save Trainer
+                    <button type="button" class="t-btn t-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="t-btn t-btn-warning">
+                        <i class="fas fa-save"></i> Save Trainer
                     </button>
                 </div>
             </form>

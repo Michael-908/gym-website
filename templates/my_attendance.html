@@ -2,40 +2,115 @@
 {% block title %}My Attendance - Gym{% endblock %}
 
 {% block content %}
-<div class="member-card mb-4">
-    <div class="member-card-header">
-        <i class="fas fa-calendar-check mr-2"></i>My Attendance
-        <span class="badge badge-info ml-2">{{ total }} total visits</span>
+
+<div style="margin-bottom:24px;">
+    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+        <i class="fas fa-calendar-check" style="color:#36B9CC;margin-right:8px;"></i>My Attendance
+    </h4>
+    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Your gym visit history and check-in records.</p>
+</div>
+
+<!-- Stats -->
+<div class="m-stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+    <div class="m-stat-card blue">
+        <div>
+            <div class="m-stat-label">Total Visits</div>
+            <div class="m-stat-value">{{ total }}</div>
+        </div>
+        <div class="m-stat-icon"><i class="fas fa-calendar-check"></i></div>
     </div>
-    <div class="member-card-body">
-        {% if records %}
-            {% for record in records %}
-            <div class="member-list-item">
-                <div class="flex-grow-1">
-                    <div class="font-weight-bold text-white">
-                        {{ record.date.strftime('%A, %d %B %Y') if record.date else 'N/A' }}
-                    </div>
-                    <div class="text-white-50 small">
-                        <i class="fas fa-sign-in-alt mr-1 text-success"></i>
-                        In: {{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}
-                        &nbsp;·&nbsp;
-                        <i class="fas fa-sign-out-alt mr-1 text-danger"></i>
-                        Out: {{ record.check_out.strftime('%I:%M %p') if record.check_out else 'Still in' }}
-                    </div>
-                </div>
-                {% if record.check_out %}
-                    <span class="badge badge-secondary">Done</span>
+    <div class="m-stat-card green">
+        <div>
+            <div class="m-stat-label">This Month</div>
+            <div class="m-stat-value">
+                {% set month_count = records|selectattr('date')|list|length %}
+                {{ records|length if records else 0 }}
+            </div>
+        </div>
+        <div class="m-stat-icon"><i class="fas fa-fire"></i></div>
+    </div>
+    <div class="m-stat-card purple">
+        <div>
+            <div class="m-stat-label">Current Status</div>
+            <div class="m-stat-value" style="font-size:1rem;margin-top:4px;">
+                {% set latest = records[0] if records else none %}
+                {% if latest and not latest.check_out %}
+                    <span class="m-badge m-badge-success">Present</span>
                 {% else %}
-                    <span class="badge badge-success">Present</span>
+                    <span class="m-badge m-badge-secondary">Away</span>
                 {% endif %}
             </div>
-            {% endfor %}
+        </div>
+        <div class="m-stat-icon"><i class="fas fa-user-check"></i></div>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="m-card">
+    <div class="m-card-header">
+        <span><i class="fas fa-clipboard-list" style="margin-right:8px;color:#36B9CC;"></i>Visit History</span>
+        <span class="m-badge m-badge-info">{{ total }} total visits</span>
+    </div>
+    <div style="overflow-x:auto;">
+        {% if records %}
+        <table class="m-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td style="color:#8B949E;">{{ loop.index }}</td>
+                    <td style="color:#C9D1D9;font-size:0.82rem;">
+                        {{ record.date.strftime('%A, %d %B %Y') if record.date else 'N/A' }}
+                    </td>
+                    <td>
+                        <span style="color:#10B981;font-size:0.82rem;font-weight:600;">
+                            <i class="fas fa-sign-in-alt" style="margin-right:4px;"></i>
+                            {{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if record.check_out %}
+                        <span style="color:#F85149;font-size:0.82rem;font-weight:600;">
+                            <i class="fas fa-sign-out-alt" style="margin-right:4px;"></i>
+                            {{ record.check_out.strftime('%I:%M %p') }}
+                        </span>
+                        {% else %}
+                        <span style="color:#8B949E;font-size:0.82rem;">Still in</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:#8B949E;font-size:0.8rem;">
+                        {% if record.check_in and record.check_out %}
+                            {% set diff = (record.check_out - record.check_in).seconds // 60 %}
+                            {% if diff >= 60 %}{{ diff // 60 }}h {{ diff % 60 }}m{% else %}{{ diff }}m{% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if record.check_out %}
+                            <span class="m-badge m-badge-secondary">Checked Out</span>
+                        {% else %}
+                            <span class="m-badge m-badge-success">● Present</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-        <div class="text-center text-white-50 py-4">
-            <i class="fas fa-calendar-times fa-2x mb-2"></i>
-            <p>No attendance records yet.</p>
+        <div style="padding:60px;text-align:center;color:#8B949E;">
+            <i class="fas fa-calendar-times" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
+            <p>No attendance records yet. Your visits will appear here after checking in.</p>
         </div>
         {% endif %}
     </div>
 </div>
+
 {% endblock %}

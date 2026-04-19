@@ -1,39 +1,40 @@
 {% extends "base.html" %}
-
 {% block title %}Edit Class - Gym Management System{% endblock %}
 
 {% block content %}
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Edit Class</h1>
-    <a href="{{ url_for('classes') }}" class="btn btn-secondary btn-sm">
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-edit" style="color:#8B5CF6;margin-right:8px;"></i>Edit Class
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Update class schedule, trainer and capacity.</p>
+    </div>
+    <a href="{{ url_for('classes') }}" class="t-btn t-btn-secondary">
         <i class="fas fa-arrow-left"></i> Back to Classes
     </a>
 </div>
 
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Edit Class Details</h6>
+<div class="t-card" style="max-width:720px;">
+    <div class="t-card-header">
+        <span><i class="fas fa-calendar-alt" style="margin-right:8px;color:#8B5CF6;"></i>{{ gym_class.name }}</span>
+        <span class="t-badge t-badge-primary">{{ gym_class.bookings|length }}/{{ gym_class.capacity }} booked</span>
     </div>
-    <div class="card-body">
+    <div class="t-card-body">
         <form method="POST" action="{{ url_for('edit_class', id=gym_class.id) }}">
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Class Name</label>
-                        <input type="text" class="form-control" name="name"
-                            value="{{ gym_class.name }}" required>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Class Name</label>
+                        <input type="text" class="form-control" name="name" value="{{ gym_class.name }}" required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Trainer</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Trainer</label>
                         <select class="form-control" name="trainer_id">
                             {% for trainer in trainers %}
-                            <option value="{{ trainer.id }}"
-                                {% if gym_class.trainer_id == trainer.id %}selected{% endif %}>
-                                {{ trainer.name }}
-                            </option>
+                            <option value="{{ trainer.id }}" {% if gym_class.trainer_id == trainer.id %}selected{% endif %}>{{ trainer.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -42,32 +43,26 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Schedule</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Schedule</label>
                         <input type="datetime-local" class="form-control" name="schedule"
                             value="{{ gym_class.schedule.strftime('%Y-%m-%dT%H:%M') if gym_class.schedule else '' }}">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Capacity</label>
-                        <input type="number" class="form-control" name="capacity"
-                            value="{{ gym_class.capacity }}" min="1" required>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Capacity</label>
+                        <input type="number" class="form-control" name="capacity" value="{{ gym_class.capacity }}" min="1" required>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea class="form-control" name="description"
-                            rows="3">{{ gym_class.description }}</textarea>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Description</label>
+                <textarea class="form-control" name="description" rows="3">{{ gym_class.description or '' }}</textarea>
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save mr-1"></i> Update Class
-            </button>
-            <a href="{{ url_for('classes') }}" class="btn btn-secondary">Cancel</a>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+                <button type="submit" class="t-btn t-btn-warning"><i class="fas fa-save"></i> Update Class</button>
+                <a href="{{ url_for('classes') }}" class="t-btn t-btn-secondary">Cancel</a>
+            </div>
         </form>
     </div>
 </div>

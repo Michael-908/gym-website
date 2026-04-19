@@ -1,39 +1,41 @@
 {% extends "base.html" %}
-
 {% block title %}Edit Meal Plan - Gym Management System{% endblock %}
 
 {% block content %}
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Edit Meal Plan</h1>
-    <a href="{{ url_for('nutrition') }}" class="btn btn-secondary btn-sm">
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-edit" style="color:#F59E0B;margin-right:8px;"></i>Edit Meal Plan
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Update nutritional targets and meal schedule.</p>
+    </div>
+    <a href="{{ url_for('nutrition') }}" class="t-btn t-btn-secondary">
         <i class="fas fa-arrow-left"></i> Back to Nutrition
     </a>
 </div>
 
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Edit Meal Plan Details</h6>
+<div class="t-card" style="max-width:720px;">
+    <div class="t-card-header">
+        <span><i class="fas fa-apple-alt" style="margin-right:8px;color:#F59E0B;"></i>{{ plan.meal_plan }}</span>
+        <span class="t-badge t-badge-warning">{{ plan.member.name if plan.member else 'Unknown' }}</span>
     </div>
-    <div class="card-body">
+    <div class="t-card-body">
         <form method="POST" action="{{ url_for('edit_nutrition', id=plan.id) }}">
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Member</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Member</label>
                         <select class="form-control" name="member_id">
                             {% for member in members %}
-                            <option value="{{ member.id }}"
-                                {% if plan.member_id == member.id %}selected{% endif %}>
-                                {{ member.name }}
-                            </option>
+                            <option value="{{ member.id }}" {% if plan.member_id == member.id %}selected{% endif %}>{{ member.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Meal Plan</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Meal Plan</label>
                         <select class="form-control" name="meal_plan">
                             <option value="Weight Loss Plan" {% if plan.meal_plan == 'Weight Loss Plan' %}selected{% endif %}>Weight Loss Plan</option>
                             <option value="Muscle Gain Plan" {% if plan.meal_plan == 'Muscle Gain Plan' %}selected{% endif %}>Muscle Gain Plan</option>
@@ -47,32 +49,25 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Daily Calories (kcal)</label>
-                        <input type="number" class="form-control" name="calories"
-                            value="{{ plan.calories }}" min="0" required>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Daily Calories (kcal)</label>
+                        <input type="number" class="form-control" name="calories" value="{{ plan.calories }}" min="0" required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Daily Protein (grams)</label>
-                        <input type="number" class="form-control" name="protein"
-                            value="{{ plan.protein }}" min="0" required>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Daily Protein (g)</label>
+                        <input type="number" class="form-control" name="protein" value="{{ plan.protein }}" min="0" required>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label>Meal Schedule</label>
-                        <textarea class="form-control" name="schedule"
-                            rows="3">{{ plan.schedule }}</textarea>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Meal Schedule</label>
+                <textarea class="form-control" name="schedule" rows="3">{{ plan.schedule or '' }}</textarea>
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save mr-1"></i> Update Meal Plan
-            </button>
-            <a href="{{ url_for('nutrition') }}" class="btn btn-secondary">Cancel</a>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+                <button type="submit" class="t-btn t-btn-warning"><i class="fas fa-save"></i> Update Plan</button>
+                <a href="{{ url_for('nutrition') }}" class="t-btn t-btn-secondary">Cancel</a>
+            </div>
         </form>
     </div>
 </div>
