@@ -197,6 +197,14 @@
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0; }
 
+
+        /* ── Tabs ── */
+        .dash-tabs{display:flex;gap:4px;margin-bottom:24px;background:#161B22;border:1px solid #30363D;border-radius:10px;padding:5px;}
+        .dash-tab{padding:8px 18px;border-radius:7px;border:none;background:transparent;color:#8B949E;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:7px;}
+        .dash-tab:hover{color:#E6EDF3;background:#21262D;}
+        .dash-tab.active{background:#1A73E8;color:#fff;}
+        .dash-panel{display:none;}
+        .dash-panel.active{display:block;}
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0D1117; }
@@ -289,215 +297,97 @@
         {% endwith %}
     </div>
 
-    <!-- Stats Row -->
+    <!-- Stats Row — always visible -->
     <div class="t-stats">
-        <div class="t-stat-card blue">
-            <div>
-                <div class="t-stat-label">My Clients</div>
-                <div class="t-stat-value">{{ my_clients|length }}</div>
-            </div>
-            <div class="t-stat-icon"><i class="fas fa-users"></i></div>
-        </div>
-        <div class="t-stat-card green">
-            <div>
-                <div class="t-stat-label">Today's Classes</div>
-                <div class="t-stat-value">{{ today_classes|length }}</div>
-            </div>
-            <div class="t-stat-icon"><i class="fas fa-calendar-check"></i></div>
-        </div>
-        <div class="t-stat-card yellow">
-            <div>
-                <div class="t-stat-label">Attendance Today</div>
-                <div class="t-stat-value">{{ week_attendance }}</div>
-            </div>
-            <div class="t-stat-icon"><i class="fas fa-user-check"></i></div>
-        </div>
-        <div class="t-stat-card purple">
-            <div>
-                <div class="t-stat-label">Specialization</div>
-                <div class="t-stat-value" style="font-size:1rem;">
-                    {{ trainer.specialization if trainer else 'N/A' }}
-                </div>
-            </div>
-            <div class="t-stat-icon"><i class="fas fa-dumbbell"></i></div>
-        </div>
+        <div class="t-stat-card blue"><div><div class="t-stat-label">My Clients</div><div class="t-stat-value">{{ my_clients|length }}</div></div><div class="t-stat-icon"><i class="fas fa-users"></i></div></div>
+        <div class="t-stat-card green"><div><div class="t-stat-label">Today's Classes</div><div class="t-stat-value">{{ today_classes|length }}</div></div><div class="t-stat-icon"><i class="fas fa-calendar-check"></i></div></div>
+        <div class="t-stat-card yellow"><div><div class="t-stat-label">Attendance Today</div><div class="t-stat-value">{{ week_attendance }}</div></div><div class="t-stat-icon"><i class="fas fa-user-check"></i></div></div>
+        <div class="t-stat-card purple"><div><div class="t-stat-label">Specialization</div><div class="t-stat-value" style="font-size:1rem;">{{ trainer.specialization if trainer else "N/A" }}</div></div><div class="t-stat-icon"><i class="fas fa-dumbbell"></i></div></div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="t-card">
-        <div class="t-card-header"><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i> Quick Actions</div>
-        <div class="t-card-body">
-            <div class="t-quick-actions">
-                <a href="{{ url_for('attendance') }}" class="t-btn t-btn-success">
-                    <i class="fas fa-calendar-check"></i> Mark Attendance
-                </a>
-                <a href="{{ url_for('classes') }}" class="t-btn t-btn-primary">
-                    <i class="fas fa-calendar-alt"></i> Manage Classes
-                </a>
-                <a href="{{ url_for('workouts') }}" class="t-btn t-btn-info">
-                    <i class="fas fa-running"></i> Workouts
-                </a>
-                <a href="{{ url_for('nutrition') }}" class="t-btn t-btn-warning">
-                    <i class="fas fa-apple-alt"></i> Nutrition
-                </a>
-                <a href="{{ url_for('progress') }}" class="t-btn t-btn-secondary">
-                    <i class="fas fa-chart-line"></i> Progress
-                </a>
-            </div>
-        </div>
+    <!-- Tab Nav -->
+    <div class="dash-tabs">
+        <button class="dash-tab active" onclick="switchTab('overview',this)"><i class="fas fa-tachometer-alt"></i> Overview</button>
+        <button class="dash-tab" onclick="switchTab('clients',this)"><i class="fas fa-users"></i> My Clients</button>
+        <button class="dash-tab" onclick="switchTab('attendance',this)"><i class="fas fa-calendar-check"></i> Attendance</button>
     </div>
 
-    <!-- Today's Classes + Clients -->
-    <div class="t-grid-2">
-
-        <!-- Today's Classes -->
+    <!-- TAB: OVERVIEW -->
+    <div id="tab-overview" class="dash-panel active">
         <div class="t-card">
-            <div class="t-card-header">
-                <span><i class="fas fa-calendar-day" style="margin-right:8px;color:#1A73E8;"></i>Today's Classes</span>
-                <a href="{{ url_for('classes') }}" class="t-btn t-btn-sm t-btn-primary">+ Add Class</a>
-            </div>
-            <div class="t-card-body">
-                {% if today_classes %}
-                    {% for class in today_classes %}
-                    <div class="t-list-item">
-                        <div class="t-list-icon blue"><i class="fas fa-dumbbell"></i></div>
-                        <div style="flex:1;">
-                            <div style="font-weight:700;color:#E6EDF3;">{{ class.name }}</div>
-                            <div style="font-size:0.8rem;color:#8B949E;">
-                                <i class="fas fa-clock" style="margin-right:4px;"></i>
-                                {{ class.schedule.strftime('%I:%M %p') if class.schedule else 'N/A' }}
-                                &nbsp;·&nbsp;
-                                <i class="fas fa-users" style="margin-right:4px;"></i>
-                                {{ class.bookings|length }}/{{ class.capacity }}
-                            </div>
-                        </div>
-                        <span class="t-badge t-badge-success">Today</span>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div style="text-align:center;padding:30px 0;color:#8B949E;">
-                    <i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
-                    No classes scheduled today
-                </div>
-                {% endif %}
-            </div>
+            <div class="t-card-header"><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i>Quick Actions</div>
+            <div class="t-card-body"><div class="t-quick-actions">
+                <a href="{{ url_for('attendance') }}"  class="t-btn t-btn-success"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
+                <a href="{{ url_for('classes') }}"     class="t-btn t-btn-primary"><i class="fas fa-calendar-alt"></i> Manage Classes</a>
+                <a href="{{ url_for('workouts') }}"    class="t-btn t-btn-info"><i class="fas fa-running"></i> Workouts</a>
+                <a href="{{ url_for('nutrition') }}"   class="t-btn t-btn-warning"><i class="fas fa-apple-alt"></i> Nutrition</a>
+                <a href="{{ url_for('progress') }}"    class="t-btn t-btn-secondary"><i class="fas fa-chart-line"></i> Progress</a>
+            </div></div>
         </div>
-
-        <!-- My Clients -->
         <div class="t-card">
-            <div class="t-card-header">
-                <span><i class="fas fa-users" style="margin-right:8px;color:#10B981;"></i>My Clients</span>
-                <span class="t-badge t-badge-success">{{ my_clients|length }} total</span>
-            </div>
+            <div class="t-card-header"><span><i class="fas fa-calendar-day" style="margin-right:8px;color:#1A73E8;"></i>Today's Classes</span><a href="{{ url_for('classes') }}" class="t-btn t-btn-sm t-btn-primary">+ Add Class</a></div>
             <div class="t-card-body">
-                {% if my_clients %}
-                    {% for client in my_clients %}
-                    <div class="t-list-item">
-                        <div class="t-avatar" style="margin-right:12px;">
-                            {{ client.name[0].upper() }}
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-weight:600;color:#E6EDF3;">{{ client.name }}</div>
-                            <div style="font-size:0.78rem;color:#8B949E;">{{ client.goal or 'No goal set' }}</div>
-                        </div>
-                        <span class="t-badge {{ 't-badge-success' if client.status == 'active' else 't-badge-danger' }}">
-                            {{ client.status }}
-                        </span>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div style="text-align:center;padding:30px 0;color:#8B949E;">
-                    <i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
-                    No clients assigned yet
-                </div>
-                {% endif %}
+                {% if today_classes %}{% for class in today_classes %}
+                <div class="t-list-item">
+                    <div class="t-list-icon blue"><i class="fas fa-dumbbell"></i></div>
+                    <div style="flex:1;"><div style="font-weight:700;color:#E6EDF3;">{{ class.name }}</div>
+                    <div style="font-size:0.8rem;color:#8B949E;"><i class="fas fa-clock" style="margin-right:4px;"></i>{{ class.schedule.strftime("%I:%M %p") if class.schedule else "N/A" }} &nbsp;·&nbsp; <i class="fas fa-users" style="margin-right:4px;"></i>{{ class.bookings|length }}/{{ class.capacity }}</div></div>
+                    <span class="t-badge t-badge-success">Today</span>
+                </div>{% endfor %}
+                {% else %}<div style="text-align:center;padding:30px 0;color:#8B949E;"><i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>No classes scheduled today</div>{% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Recent Attendance -->
-    <div class="t-card">
-        <div class="t-card-header">
-            <span><i class="fas fa-list" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance Records</span>
-            <a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a>
-        </div>
-        <div class="t-card-body" style="padding:0;">
-            <div style="overflow-x:auto;">
-                <table class="t-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Member</th>
-                            <th>Date</th>
-                            <th>Check In</th>
-                            <th>Check Out</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in recent_attendance %}
-                        <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">
-                                        {{ record.member.name[0].upper() if record.member else '?' }}
-                                    </div>
-                                    {{ record.member.name if record.member else 'N/A' }}
-                                </div>
-                            </td>
-                            <td>{{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}</td>
-                            <td>{{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}</td>
-                            <td>{{ record.check_out.strftime('%I:%M %p') if record.check_out else '—' }}</td>
-                            <td>
-                                {% if record.check_out %}
-                                    <span class="t-badge t-badge-info">Checked Out</span>
-                                {% else %}
-                                    <span class="t-badge t-badge-success">Present</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if not record.check_out %}
-                                <a href="{{ url_for('check_out', id=record.id) }}" class="t-btn t-btn-sm t-btn-info">
-                                    <i class="fas fa-sign-out-alt"></i> Check Out
-                                </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="7" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <!-- TAB: CLIENTS -->
+    <div id="tab-clients" class="dash-panel">
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-users" style="margin-right:8px;color:#10B981;"></i>My Clients</span><span class="t-badge t-badge-success">{{ my_clients|length }} total</span></div>
+            <div style="overflow-x:auto;">{% if my_clients %}
+            <table class="t-table"><thead><tr><th>#</th><th>Client</th><th>Goal</th><th>Status</th></tr></thead><tbody>
+            {% for client in my_clients %}<tr>
+                <td style="color:#8B949E;">{{ loop.index }}</td>
+                <td><div style="display:flex;align-items:center;gap:10px;"><div class="t-avatar" style="width:30px;height:30px;font-size:0.75rem;">{{ client.name[0].upper() }}</div><span style="font-weight:600;color:#E6EDF3;">{{ client.name }}</span></div></td>
+                <td style="color:#8B949E;font-size:0.82rem;">{{ client.goal or "No goal set" }}</td>
+                <td><span class="t-badge {{ 't-badge-success' if client.status == 'active' else 't-badge-danger' }}">{{ client.status }}</span></td>
+            </tr>{% endfor %}</tbody></table>
+            {% else %}<div style="padding:50px;text-align:center;color:#8B949E;"><i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.2;"></i><p>No clients assigned yet.</p></div>{% endif %}</div>
         </div>
     </div>
 
-    <!-- Check-In Quick Form -->
-    <div class="t-card">
-        <div class="t-card-header">
-            <span><i class="fas fa-plus-circle" style="margin-right:8px;color:#10B981;"></i>Quick Check-In</span>
+    <!-- TAB: ATTENDANCE -->
+    <div id="tab-attendance" class="dash-panel">
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-plus-circle" style="margin-right:8px;color:#10B981;"></i>Quick Check-In</span></div>
+            <div class="t-card-body">
+                <form method="POST" action="{{ url_for('check_in') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                    <div class="t-form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label>Select Member</label>
+                    <select class="t-form-control" name="member_id" required><option value="">Choose a member...</option>{% for member in all_members %}<option value="{{ member.id }}">{{ member.name }}</option>{% endfor %}</select></div>
+                    <button type="submit" class="t-btn t-btn-success"><i class="fas fa-check"></i> Check In</button>
+                </form>
+            </div>
         </div>
-        <div class="t-card-body">
-            <form method="POST" action="{{ url_for('check_in') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                <div class="t-form-group" style="flex:1;min-width:200px;margin-bottom:0;">
-                    <label>Select Member</label>
-                    <select class="t-form-control" name="member_id" required>
-                        <option value="">Choose a member...</option>
-                        {% for member in all_members %}
-                        <option value="{{ member.id }}">{{ member.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="t-btn t-btn-success">
-                    <i class="fas fa-check"></i> Check In
-                </button>
-            </form>
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-list" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance Records</span><a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a></div>
+            <div style="overflow-x:auto;"><table class="t-table">
+                <thead><tr><th>#</th><th>Member</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>{% for record in recent_attendance %}<tr>
+                    <td>{{ loop.index }}</td>
+                    <td><div style="display:flex;align-items:center;gap:8px;"><div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">{{ record.member.name[0].upper() if record.member else "?" }}</div>{{ record.member.name if record.member else "N/A" }}</div></td>
+                    <td>{{ record.date.strftime("%d %b %Y") if record.date else "N/A" }}</td>
+                    <td style="color:#10B981;">{{ record.check_in.strftime("%I:%M %p") if record.check_in else "N/A" }}</td>
+                    <td style="color:#F85149;">{{ record.check_out.strftime("%I:%M %p") if record.check_out else "—" }}</td>
+                    <td>{% if record.check_out %}<span class="t-badge t-badge-secondary">Checked Out</span>{% else %}<span class="t-badge t-badge-success">Present</span>{% endif %}</td>
+                    <td>{% if not record.check_out %}<a href="{{ url_for('check_out', id=record.id) }}" class="t-btn t-btn-sm t-btn-info"><i class="fas fa-sign-out-alt"></i> Check Out</a>{% endif %}</td>
+                </tr>{% else %}<tr><td colspan="7" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>{% endfor %}</tbody>
+            </table></div>
         </div>
     </div>
 
 </div><!-- /.t-content -->
 
+<script>
+function switchTab(name,btn){document.querySelectorAll(".dash-panel").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".dash-tab").forEach(b=>b.classList.remove("active"));document.getElementById("tab-"+name).classList.add("active");btn.classList.add("active");}
+</script>
 </body>
 </html>

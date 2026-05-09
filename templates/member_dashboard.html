@@ -1,409 +1,191 @@
 {% extends "member_base.html" %}
 {% block title %}My Dashboard - Gym{% endblock %}
 
+{% block extra_css %}
+<style>
+.dash-tabs{display:flex;gap:4px;margin-bottom:24px;background:#161B22;border:1px solid #30363D;border-radius:10px;padding:5px;}
+.dash-tab{padding:8px 18px;border-radius:7px;border:none;background:transparent;color:#8B949E;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:"Nunito",sans-serif;display:flex;align-items:center;gap:7px;}
+.dash-tab:hover{color:#E6EDF3;background:#21262D;}
+.dash-tab.active{background:#1A73E8;color:#fff;}
+.dash-panel{display:none;}
+.dash-panel.active{display:block;}
+</style>
+{% endblock %}
+
 {% block content %}
 
-<!-- Welcome Banner -->
 <div class="m-welcome">
-    <div class="m-welcome-left">
-        <div class="m-welcome-avatar">{{ member.name[0].upper() }}</div>
-        <div>
-            <h4 class="m-welcome-name">Welcome back, {{ member.name.split()[0] }}! 👋</h4>
-            <p class="m-welcome-sub">
-                {% if latest_payment and latest_payment.expiry_date %}
-                    {% set days_left = (latest_payment.expiry_date - today).days %}
-                    {% if days_left > 7 %}
-                        <span class="m-badge m-badge-success">Active</span> &nbsp;{{ days_left }} days remaining
-                    {% elif days_left > 0 %}
-                        <span class="m-badge m-badge-warning">Expiring Soon</span> &nbsp;{{ days_left }} days left!
-                    {% else %}
-                        <span class="m-badge m-badge-danger">Expired</span> &nbsp;Please renew your membership
-                    {% endif %}
-                {% else %}
-                    <span class="m-badge m-badge-secondary">No active membership</span>
-                {% endif %}
-            </p>
-        </div>
+  <div class="m-welcome-left">
+    <div class="m-welcome-avatar">{{ member.name[0].upper() }}</div>
+    <div>
+      <h4 class="m-welcome-name">Welcome back, {{ member.name.split()[0] }}! 👋</h4>
+      <p class="m-welcome-sub">
+        {% if latest_payment and latest_payment.expiry_date %}
+          {% set days_left = (latest_payment.expiry_date - today).days %}
+          {% if days_left > 7 %}<span class="m-badge m-badge-success">Active</span> &nbsp;{{ days_left }} days remaining
+          {% elif days_left > 0 %}<span class="m-badge m-badge-warning">Expiring Soon</span> &nbsp;{{ days_left }} days left!
+          {% else %}<span class="m-badge m-badge-danger">Expired</span> &nbsp;Please renew your membership{% endif %}
+        {% else %}<span class="m-badge m-badge-secondary">No active membership</span>{% endif %}
+      </p>
     </div>
-    <div class="m-welcome-right">
-        <span class="m-membership-badge">
-            <i class="fas fa-id-card" style="margin-right:6px;"></i>
-            {{ member.plan.name if member.plan else 'No Plan' }}
-        </span>
-        <span class="m-visits-badge">
-            <i class="fas fa-fire" style="margin-right:4px;color:#F59E0B;"></i>
-            {{ month_attendance }} visits this month
-        </span>
-    </div>
+  </div>
+  <div class="m-welcome-right">
+    <span class="m-membership-badge"><i class="fas fa-id-card" style="margin-right:6px;"></i>{{ member.plan.name if member.plan else "No Plan" }}</span>
+    <span class="m-visits-badge"><i class="fas fa-fire" style="margin-right:4px;color:#F59E0B;"></i>{{ month_attendance }} visits this month</span>
+  </div>
 </div>
 
-<!-- Stats Row -->
 <div class="m-stats">
-    <div class="m-stat-card blue">
-        <div>
-            <div class="m-stat-label">Visits This Month</div>
-            <div class="m-stat-value">{{ month_attendance }}</div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-calendar-check"></i></div>
-    </div>
-    <div class="m-stat-card green">
-        <div>
-            <div class="m-stat-label">My Workouts</div>
-            <div class="m-stat-value">{{ member_workouts|length }}</div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-running"></i></div>
-    </div>
-    <div class="m-stat-card yellow">
-        <div>
-            <div class="m-stat-label">Booked Classes</div>
-            <div class="m-stat-value">{{ upcoming_classes|length }}</div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-dumbbell"></i></div>
-    </div>
-    <div class="m-stat-card purple">
-        <div>
-            <div class="m-stat-label">Progress Records</div>
-            <div class="m-stat-value">{{ member_progress|length }}</div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-chart-line"></i></div>
-    </div>
+  <div class="m-stat-card blue"><div><div class="m-stat-label">Visits This Month</div><div class="m-stat-value">{{ month_attendance }}</div></div><div class="m-stat-icon"><i class="fas fa-calendar-check"></i></div></div>
+  <div class="m-stat-card green"><div><div class="m-stat-label">My Workouts</div><div class="m-stat-value">{{ member_workouts|length }}</div></div><div class="m-stat-icon"><i class="fas fa-running"></i></div></div>
+  <div class="m-stat-card yellow"><div><div class="m-stat-label">Booked Classes</div><div class="m-stat-value">{{ upcoming_classes|length }}</div></div><div class="m-stat-icon"><i class="fas fa-dumbbell"></i></div></div>
+  <div class="m-stat-card purple"><div><div class="m-stat-label">Progress Records</div><div class="m-stat-value">{{ member_progress|length }}</div></div><div class="m-stat-icon"><i class="fas fa-chart-line"></i></div></div>
 </div>
 
-<!-- Quick Actions -->
-<div class="m-card" style="margin-bottom:20px;">
-    <div class="m-card-header">
-        <span><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i>Quick Actions</span>
-    </div>
+<div class="dash-tabs">
+  <button class="dash-tab active" onclick="switchTab('home',this)"><i class="fas fa-home"></i> Home</button>
+  <button class="dash-tab" onclick="switchTab('fitness',this)"><i class="fas fa-running"></i> Workouts &amp; Progress</button>
+  <button class="dash-tab" onclick="switchTab('membership',this)"><i class="fas fa-id-card"></i> Membership</button>
+</div>
+
+<div id="tab-home" class="dash-panel active">
+  <div class="m-card" style="margin-bottom:20px;">
+    <div class="m-card-header"><span><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i>Quick Actions</span></div>
     <div class="m-card-body">
-        <div class="m-actions-grid">
-            <a href="{{ url_for('my_workouts') }}" class="m-action-card">
-                <i class="fas fa-running" style="color:#1A73E8;"></i>
-                <span>Workouts</span>
-            </a>
-            <a href="{{ url_for('my_progress') }}" class="m-action-card">
-                <i class="fas fa-chart-line" style="color:#10B981;"></i>
-                <span>Progress</span>
-            </a>
-            <a href="{{ url_for('my_nutrition') }}" class="m-action-card">
-                <i class="fas fa-apple-alt" style="color:#F59E0B;"></i>
-                <span>Nutrition</span>
-            </a>
-            <a href="{{ url_for('my_attendance') }}" class="m-action-card">
-                <i class="fas fa-calendar-check" style="color:#36B9CC;"></i>
-                <span>Attendance</span>
-            </a>
-            <a href="{{ url_for('my_payments') }}" class="m-action-card">
-                <i class="fas fa-credit-card" style="color:#8B5CF6;"></i>
-                <span>Payments</span>
-            </a>
-            <a href="{{ url_for('trainer_profiles') }}" class="m-action-card">
-                <i class="fas fa-user-tie" style="color:#F85149;"></i>
-                <span>Trainers</span>
-            </a>
-        </div>
+      <div class="m-actions-grid">
+        <a href="{{ url_for('my_workouts') }}"   class="m-action-card"><i class="fas fa-running"        style="color:#1A73E8;"></i><span>Workouts</span></a>
+        <a href="{{ url_for('my_progress') }}"   class="m-action-card"><i class="fas fa-chart-line"     style="color:#10B981;"></i><span>Progress</span></a>
+        <a href="{{ url_for('my_nutrition') }}"  class="m-action-card"><i class="fas fa-apple-alt"      style="color:#F59E0B;"></i><span>Nutrition</span></a>
+        <a href="{{ url_for('my_attendance') }}" class="m-action-card"><i class="fas fa-calendar-check" style="color:#36B9CC;"></i><span>Attendance</span></a>
+        <a href="{{ url_for('my_payments') }}"   class="m-action-card"><i class="fas fa-credit-card"    style="color:#8B5CF6;"></i><span>Payments</span></a>
+        <a href="{{ url_for('trainer_profiles') }}" class="m-action-card"><i class="fas fa-user-tie"    style="color:#F85149;"></i><span>Trainers</span></a>
+      </div>
     </div>
-</div>
+  </div>
 
-<!-- Middle Row: Classes + Membership Card -->
-<div class="m-grid-2">
-
-    <!-- Upcoming Classes -->
-    <div class="m-card">
-        <div class="m-card-header">
-            <span><i class="fas fa-calendar-alt" style="margin-right:8px;color:#8B5CF6;"></i>My Booked Classes</span>
-            <span class="m-badge m-badge-purple">{{ upcoming_classes|length }}</span>
-        </div>
-        <div class="m-card-body" style="padding:0;">
-            {% if upcoming_classes %}
-                <table class="m-table">
-                    <thead>
-                        <tr>
-                            <th>Class</th>
-                            <th>Schedule</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for booking in upcoming_classes %}
-                        <tr>
-                            <td>
-                                <div style="font-weight:600;color:#E6EDF3;">{{ booking.gym_class.name }}</div>
-                                <div style="font-size:0.75rem;color:#8B949E;">
-                                    <i class="fas fa-user-tie" style="margin-right:3px;"></i>
-                                    {{ booking.gym_class.trainer.name if booking.gym_class.trainer else 'N/A' }}
-                                </div>
-                            </td>
-                            <td style="font-size:0.8rem;color:#C9D1D9;">
-                                {{ booking.gym_class.schedule.strftime('%d %b, %I:%M %p') if booking.gym_class.schedule else 'N/A' }}
-                            </td>
-                            <td>
-                                <a href="{{ url_for('cancel_booking', booking_id=booking.id) }}"
-                                   class="m-btn m-btn-sm m-btn-outline-danger"
-                                   onclick="return confirm('Cancel this booking?')">
-                                    Cancel
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-            <div style="padding:40px;text-align:center;color:#8B949E;">
-                <i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.3;"></i>
-                <p style="margin-bottom:12px;">No classes booked yet.</p>
-            </div>
-            {% endif %}
-
-            {% if available_classes %}
-            <div style="padding:14px 18px;border-top:1px solid #30363D;">
-                <div style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.3);
-                            text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-                    Available Classes
-                </div>
-                {% for cls in available_classes[:3] %}
-                <div class="m-list-item" style="padding:10px 0;">
-                    <div style="flex:1;">
-                        <div style="font-weight:600;color:#E6EDF3;font-size:0.875rem;">{{ cls.name }}</div>
-                        <div style="font-size:0.75rem;color:#8B949E;">
-                            {{ cls.schedule.strftime('%d %b at %I:%M %p') if cls.schedule else 'N/A' }}
-                            &nbsp;·&nbsp; {{ cls.bookings|length }}/{{ cls.capacity }} spots
-                        </div>
-                    </div>
-                    {% if cls.bookings|length < cls.capacity %}
-                    <a href="{{ url_for('book_class', class_id=cls.id) }}" class="m-btn m-btn-sm m-btn-primary">Book</a>
-                    {% else %}
-                    <span class="m-badge m-badge-danger">Full</span>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Membership Card -->
-    <div class="m-card">
-        <div class="m-card-header">
-            <span><i class="fas fa-id-card" style="margin-right:8px;color:#1A73E8;"></i>My Membership</span>
-            <a href="{{ url_for('my_payments') }}" class="m-btn m-btn-sm m-btn-success">Renew / Pay</a>
-        </div>
-        <div class="m-card-body">
-            <!-- Digital Card -->
-            <div class="m-digital-card" style="margin-bottom:18px;">
-                <div class="m-card-chip"><i class="fas fa-dumbbell" style="margin-right:8px;"></i>GYM SYSTEM</div>
-                <div class="m-card-name">{{ member.name }}</div>
-                <div class="m-card-plan">{{ member.plan.name if member.plan else 'No Plan Selected' }}</div>
-                <div class="m-card-row">
-                    <div>
-                        <div class="m-card-id">ID: #{{ member.id }}</div>
-                        <div style="margin-top:4px;">
-                            {% if member.status == 'active' %}
-                                <span class="m-badge m-badge-success">● Active</span>
-                            {% else %}
-                                <span class="m-badge m-badge-danger">● Inactive</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="m-card-expiry">
-                        {% if latest_payment and latest_payment.expiry_date %}
-                        <div>Expires</div>
-                        <div style="color:rgba(255,255,255,0.8);font-weight:700;">
-                            {{ latest_payment.expiry_date.strftime('%d %b %Y') }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Payments -->
-            <div style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.3);
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-                Recent Payments
-            </div>
-            {% for payment in recent_payments %}
-            <div class="m-list-item">
-                <div style="flex:1;">
-                    <div style="font-weight:600;color:#E6EDF3;font-size:0.875rem;">
-                        KSh {{ "%.2f"|format(payment.amount) }}
-                    </div>
-                    <div style="font-size:0.75rem;color:#8B949E;">
-                        {{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}
-                        &nbsp;·&nbsp; {{ payment.method|upper if payment.method else 'N/A' }}
-                    </div>
-                </div>
-                <span class="m-badge m-badge-success">{{ payment.status }}</span>
-            </div>
-            {% else %}
-            <p style="color:#8B949E;font-size:0.82rem;text-align:center;padding:20px 0;">
-                No payment history yet.
-                <a href="{{ url_for('my_payments') }}" style="color:#1A73E8;">Make a payment</a>.
-            </p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<!-- Bottom Row: Progress + Workouts -->
-<div class="m-grid-2" style="margin-top:0;">
-
-    <!-- Progress Snapshot -->
-    <div class="m-card">
-        <div class="m-card-header">
-            <span><i class="fas fa-chart-line" style="margin-right:8px;color:#10B981;"></i>My Progress</span>
-            <a href="{{ url_for('my_progress') }}" class="m-btn m-btn-sm m-btn-success">View All & Add</a>
-        </div>
-        <div class="m-card-body">
-            {% if member_progress %}
-            <canvas id="memberProgressChart" height="120" style="margin-bottom:14px;"></canvas>
-            {% for record in member_progress[:4] %}
-            <div class="m-list-item">
-                <div style="flex:1;">
-                    <div style="font-weight:600;color:#E6EDF3;font-size:0.875rem;">
-                        {{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}
-                    </div>
-                    <div style="font-size:0.78rem;color:#8B949E;">
-                        <i class="fas fa-weight" style="margin-right:4px;"></i>{{ record.weight }} kg
-                        &nbsp;·&nbsp; BMI: {{ "%.1f"|format(record.bmi) if record.bmi else 'N/A' }}
-                        {% if record.bmi %}
-                            {% if record.bmi < 18.5 %}<span class="m-badge m-badge-warning" style="margin-left:4px;">Underweight</span>
-                            {% elif record.bmi < 25 %}<span class="m-badge m-badge-success" style="margin-left:4px;">Normal</span>
-                            {% elif record.bmi < 30 %}<span class="m-badge m-badge-warning" style="margin-left:4px;">Overweight</span>
-                            {% else %}<span class="m-badge m-badge-danger" style="margin-left:4px;">Obese</span>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div style="text-align:center;padding:40px 0;color:#8B949E;">
-                <i class="fas fa-chart-bar" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.3;"></i>
-                <p style="margin-bottom:12px;">No progress records yet.</p>
-                <a href="{{ url_for('my_progress') }}" class="m-btn m-btn-success">Add First Measurement</a>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Workout Snapshot -->
-    <div class="m-card">
-        <div class="m-card-header">
-            <span><i class="fas fa-dumbbell" style="margin-right:8px;color:#36B9CC;"></i>My Workout Plans</span>
-            <a href="{{ url_for('my_workouts') }}" class="m-btn m-btn-sm m-btn-primary">View All & Add</a>
-        </div>
-        <div class="m-card-body" style="padding:0;">
-            {% if member_workouts %}
-            <table class="m-table">
-                <thead>
-                    <tr>
-                        <th>Workout</th>
-                        <th>Type</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for mw in member_workouts %}
-                    <tr>
-                        <td>
-                            <div style="font-weight:600;color:#E6EDF3;">{{ mw.workout.name if mw.workout else 'N/A' }}</div>
-                            {% if mw.workout and mw.workout.duration %}
-                            <div style="font-size:0.75rem;color:#8B949E;">
-                                <i class="fas fa-clock" style="margin-right:3px;"></i>{{ mw.workout.duration }} mins
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if mw.workout %}
-                            <span class="m-badge m-badge-info">{{ mw.workout.type or 'General' }}</span>
-                            {% endif %}
-                        </td>
-                        <td style="font-size:0.8rem;color:#8B949E;">
-                            {{ mw.assigned_date.strftime('%d %b') if mw.assigned_date else '—' }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div style="padding:40px;text-align:center;color:#8B949E;">
-                <i class="fas fa-running" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.3;"></i>
-                <p style="margin-bottom:12px;">No workouts yet.</p>
-                <a href="{{ url_for('my_workouts') }}" class="m-btn m-btn-primary">Add Personal Workout</a>
-            </div>
-            {% endif %}
-        </div>
-
-        {% if nutrition_plan %}
-        <!-- Nutrition Snippet -->
-        <div style="border-top:1px solid #30363D;padding:14px 18px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <div style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.3);
-                            text-transform:uppercase;letter-spacing:1px;">Nutrition Plan</div>
-                <a href="{{ url_for('my_nutrition') }}" style="color:#F59E0B;font-size:0.75rem;">View Details</a>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div style="background:#21262D;border-radius:8px;padding:12px;text-align:center;">
-                    <div style="font-size:1.3rem;font-weight:800;color:#E6EDF3;">{{ nutrition_plan.calories }}</div>
-                    <div style="font-size:0.72rem;color:#8B949E;">Daily Calories</div>
-                </div>
-                <div style="background:#21262D;border-radius:8px;padding:12px;text-align:center;">
-                    <div style="font-size:1.3rem;font-weight:800;color:#E6EDF3;">{{ nutrition_plan.protein }}g</div>
-                    <div style="font-size:0.72rem;color:#8B949E;">Daily Protein</div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Our Trainers -->
-<div class="m-card">
+  <div class="m-card" style="margin-bottom:20px;">
     <div class="m-card-header">
-        <span><i class="fas fa-user-tie" style="margin-right:8px;color:#F59E0B;"></i>Our Trainers</span>
-        <a href="{{ url_for('trainer_profiles') }}" class="m-btn m-btn-sm m-btn-warning">View All</a>
+      <span><i class="fas fa-calendar-alt" style="margin-right:8px;color:#8B5CF6;"></i>Upcoming Classes</span>
+      <span class="m-badge m-badge-purple">{{ upcoming_classes|length }} booked</span>
     </div>
-    <div class="m-card-body" style="padding:0;">
-        <table class="m-table">
-            <thead>
-                <tr>
-                    <th>Trainer</th>
-                    <th>Specialization</th>
-                    <th>Classes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if all_trainers %}
-                    {% for trainer in all_trainers[:5] %}
-                    <tr>
-                        <td>
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <div class="m-avatar" style="background:linear-gradient(135deg,#1A73E8,#8B5CF6);">
-                                    {{ trainer.name[0].upper() }}
-                                </div>
-                                <div>
-                                    <div style="font-weight:600;color:#E6EDF3;">{{ trainer.name }}</div>
-                                    {% if trainer.email %}
-                                    <div style="font-size:0.75rem;color:#8B949E;">{{ trainer.email }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="m-badge m-badge-primary">{{ trainer.specialization or 'General Fitness' }}</span>
-                        </td>
-                        <td>
-                            <span class="m-badge m-badge-info">{{ trainer.classes|length }} class(es)</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                <tr>
-                    <td colspan="3" style="text-align:center;padding:30px;color:#8B949E;">No trainers available yet.</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+    <div style="overflow-x:auto;">
+      {% if upcoming_classes %}
+      <table class="m-table">
+        <thead><tr><th>Class</th><th>Trainer</th><th>Schedule</th><th>Action</th></tr></thead>
+        <tbody>{% for booking in upcoming_classes %}
+          <tr>
+            <td style="font-weight:600;color:#E6EDF3;">{{ booking.gym_class.name }}</td>
+            <td style="color:#8B949E;font-size:0.82rem;">{{ booking.gym_class.trainer.name if booking.gym_class.trainer else "N/A" }}</td>
+            <td style="font-size:0.8rem;color:#C9D1D9;">{{ booking.gym_class.schedule.strftime("%d %b, %I:%M %p") if booking.gym_class.schedule else "N/A" }}</td>
+            <td><a href="{{ url_for('cancel_booking', booking_id=booking.id) }}" class="m-btn m-btn-sm m-btn-outline-danger" onclick="return confirm('Cancel this booking?')">Cancel</a></td>
+          </tr>{% endfor %}</tbody>
+      </table>
+      {% else %}
+      <div style="padding:30px;text-align:center;color:#8B949E;"><i class="fas fa-calendar-times" style="font-size:1.8rem;margin-bottom:10px;display:block;opacity:0.3;"></i>No classes booked yet.</div>
+      {% endif %}
     </div>
+    {% if available_classes %}
+    <div style="padding:14px 18px;border-top:1px solid #30363D;">
+      <div style="font-size:0.68rem;font-weight:800;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Available to Book</div>
+      {% for cls in available_classes[:4] %}
+      <div class="m-list-item" style="padding:9px 0;">
+        <div style="flex:1;">
+          <div style="font-weight:600;color:#E6EDF3;font-size:0.875rem;">{{ cls.name }}</div>
+          <div style="font-size:0.75rem;color:#8B949E;">{{ cls.schedule.strftime("%d %b at %I:%M %p") if cls.schedule else "N/A" }} &nbsp;·&nbsp; {{ cls.bookings|length }}/{{ cls.capacity }} spots</div>
+        </div>
+        {% if cls.bookings|length < cls.capacity %}<a href="{{ url_for('book_class', class_id=cls.id) }}" class="m-btn m-btn-sm m-btn-primary">Book</a>
+        {% else %}<span class="m-badge m-badge-danger">Full</span>{% endif %}
+      </div>{% endfor %}
+    </div>{% endif %}
+  </div>
+
+  <div class="m-card">
+    <div class="m-card-header"><span><i class="fas fa-user-tie" style="margin-right:8px;color:#F59E0B;"></i>Our Trainers</span><a href="{{ url_for('trainer_profiles') }}" class="m-btn m-btn-sm m-btn-warning">View All</a></div>
+    <div style="overflow-x:auto;"><table class="m-table"><thead><tr><th>Trainer</th><th>Specialization</th><th>Classes</th></tr></thead>
+    <tbody>{% if all_trainers %}{% for trainer in all_trainers[:4] %}
+      <tr>
+        <td><div style="display:flex;align-items:center;gap:10px;"><div class="m-avatar">{{ trainer.name[0].upper() }}</div><span style="font-weight:600;color:#E6EDF3;">{{ trainer.name }}</span></div></td>
+        <td><span class="m-badge m-badge-primary">{{ trainer.specialization or "General" }}</span></td>
+        <td><span class="m-badge m-badge-info">{{ trainer.classes|length }}</span></td>
+      </tr>{% endfor %}
+    {% else %}<tr><td colspan="3" style="text-align:center;color:#8B949E;padding:20px;">No trainers yet.</td></tr>{% endif %}</tbody></table></div>
+  </div>
+</div>
+
+<div id="tab-fitness" class="dash-panel">
+  <div class="m-grid-2">
+    <div class="m-card">
+      <div class="m-card-header"><span><i class="fas fa-dumbbell" style="margin-right:8px;color:#36B9CC;"></i>My Workout Plans</span><a href="{{ url_for('my_workouts') }}" class="m-btn m-btn-sm m-btn-primary">View All &amp; Add</a></div>
+      <div style="overflow-x:auto;">{% if member_workouts %}
+        <table class="m-table"><thead><tr><th>Workout</th><th>Type</th><th>Date</th></tr></thead><tbody>
+        {% for mw in member_workouts %}<tr>
+          <td><div style="font-weight:600;color:#E6EDF3;">{{ mw.workout.name if mw.workout else "N/A" }}</div>{% if mw.workout and mw.workout.duration %}<div style="font-size:0.75rem;color:#8B949E;">{{ mw.workout.duration }} mins</div>{% endif %}</td>
+          <td>{% if mw.workout %}<span class="m-badge m-badge-info">{{ mw.workout.type or "General" }}</span>{% endif %}</td>
+          <td style="font-size:0.8rem;color:#8B949E;">{{ mw.assigned_date.strftime("%d %b") if mw.assigned_date else "—" }}</td>
+        </tr>{% endfor %}</tbody></table>
+      {% else %}<div style="padding:40px;text-align:center;color:#8B949E;"><i class="fas fa-running" style="font-size:1.8rem;margin-bottom:10px;display:block;opacity:0.3;"></i><p style="margin-bottom:10px;">No workouts yet.</p><a href="{{ url_for('my_workouts') }}" class="m-btn m-btn-primary">Add Workout</a></div>{% endif %}</div>
+      {% if nutrition_plan %}
+      <div style="border-top:1px solid #30363D;padding:14px 18px;">
+        <div style="font-size:0.68rem;font-weight:800;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Nutrition Plan</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="background:#21262D;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#F59E0B;">{{ nutrition_plan.calories }}</div><div style="font-size:0.72rem;color:#8B949E;">Daily Calories</div></div>
+          <div style="background:#21262D;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#10B981;">{{ nutrition_plan.protein }}g</div><div style="font-size:0.72rem;color:#8B949E;">Daily Protein</div></div>
+        </div>
+        <div style="margin-top:10px;text-align:right;"><a href="{{ url_for('my_nutrition') }}" style="font-size:0.78rem;color:#F59E0B;">View full plan →</a></div>
+      </div>{% endif %}
+    </div>
+    <div class="m-card">
+      <div class="m-card-header"><span><i class="fas fa-chart-line" style="margin-right:8px;color:#10B981;"></i>My Progress</span><a href="{{ url_for('my_progress') }}" class="m-btn m-btn-sm m-btn-success">View All &amp; Add</a></div>
+      <div class="m-card-body">{% if member_progress %}
+        <canvas id="memberProgressChart" height="160" style="margin-bottom:14px;"></canvas>
+        {% for record in member_progress[:4] %}<div class="m-list-item"><div style="flex:1;">
+          <div style="font-weight:600;color:#E6EDF3;font-size:0.875rem;">{{ record.date.strftime("%d %b %Y") if record.date else "N/A" }}</div>
+          <div style="font-size:0.78rem;color:#8B949E;">{{ record.weight }} kg &nbsp;·&nbsp; BMI: {{ "%.1f"|format(record.bmi) if record.bmi else "N/A" }}
+            {% if record.bmi %}{% if record.bmi < 18.5 %}<span class="m-badge m-badge-warning" style="margin-left:4px;">Underweight</span>
+            {% elif record.bmi < 25 %}<span class="m-badge m-badge-success" style="margin-left:4px;">Normal</span>
+            {% elif record.bmi < 30 %}<span class="m-badge m-badge-warning" style="margin-left:4px;">Overweight</span>
+            {% else %}<span class="m-badge m-badge-danger" style="margin-left:4px;">Obese</span>{% endif %}{% endif %}
+          </div>
+        </div></div>{% endfor %}
+      {% else %}<div style="padding:40px;text-align:center;color:#8B949E;"><i class="fas fa-chart-bar" style="font-size:1.8rem;margin-bottom:10px;display:block;opacity:0.3;"></i><p style="margin-bottom:10px;">No progress records yet.</p><a href="{{ url_for('my_progress') }}" class="m-btn m-btn-success">Add Measurement</a></div>{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-membership" class="dash-panel">
+  <div class="m-grid-2">
+    <div class="m-card">
+      <div class="m-card-header"><span><i class="fas fa-id-card" style="margin-right:8px;color:#1A73E8;"></i>My Membership Card</span><a href="{{ url_for('my_payments') }}" class="m-btn m-btn-sm m-btn-success">Renew / Pay</a></div>
+      <div class="m-card-body">
+        <div class="m-digital-card" style="margin-bottom:18px;">
+          <div class="m-card-chip"><i class="fas fa-dumbbell" style="margin-right:8px;"></i>GYM SYSTEM</div>
+          <div class="m-card-name">{{ member.name }}</div>
+          <div class="m-card-plan">{{ member.plan.name if member.plan else "No Plan Selected" }}</div>
+          <div class="m-card-row">
+            <div><div class="m-card-id">ID: #{{ member.id }}</div><div style="margin-top:4px;">{% if member.status == "active" %}<span class="m-badge m-badge-success">● Active</span>{% else %}<span class="m-badge m-badge-danger">● Inactive</span>{% endif %}</div></div>
+            <div class="m-card-expiry">{% if latest_payment and latest_payment.expiry_date %}<div>Expires</div><div style="color:rgba(255,255,255,0.8);font-weight:700;">{{ latest_payment.expiry_date.strftime("%d %b %Y") }}</div>{% endif %}</div>
+          </div>
+        </div>
+        {% if latest_payment and latest_payment.expiry_date %}{% set days_left = (latest_payment.expiry_date - today).days %}
+          {% if days_left > 7 %}<div class="alert alert-success"><span><i class="fas fa-check-circle" style="margin-right:6px;"></i>Active — {{ days_left }} days remaining</span></div>
+          {% elif days_left > 0 %}<div class="alert alert-warning"><span><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>Expiring in {{ days_left }} days!</span></div>
+          {% else %}<div class="alert alert-danger"><span><i class="fas fa-times-circle" style="margin-right:6px;"></i>Membership expired. Please renew.</span></div>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+    <div class="m-card">
+      <div class="m-card-header"><span><i class="fas fa-history" style="margin-right:8px;color:#10B981;"></i>Recent Payments</span><a href="{{ url_for('my_payments') }}" class="m-btn m-btn-sm m-btn-secondary">View All</a></div>
+      <div style="overflow-x:auto;">{% if recent_payments %}
+        <table class="m-table"><thead><tr><th>Amount</th><th>Method</th><th>Date</th><th>Status</th></tr></thead><tbody>
+        {% for payment in recent_payments %}<tr>
+          <td style="color:#10B981;font-weight:700;">KSh {{ "%.2f"|format(payment.amount) }}</td>
+          <td style="font-size:0.82rem;color:#C9D1D9;">{{ payment.method|upper if payment.method else "N/A" }}</td>
+          <td style="font-size:0.8rem;color:#8B949E;">{{ payment.payment_date.strftime("%d %b %Y") if payment.payment_date else "N/A" }}</td>
+          <td><span class="m-badge m-badge-success">{{ payment.status }}</span></td>
+        </tr>{% endfor %}</tbody></table>
+      {% else %}<div style="padding:40px;text-align:center;color:#8B949E;"><i class="fas fa-receipt" style="font-size:1.8rem;margin-bottom:10px;display:block;opacity:0.3;"></i><p style="margin-bottom:10px;">No payment history yet.</p><a href="{{ url_for('my_payments') }}" class="m-btn m-btn-success">Make a Payment</a></div>{% endif %}</div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -412,28 +194,9 @@
 {% if member_progress %}
 <script src="{{ url_for('static', filename='vendor/chart.js/Chart.min.js') }}"></script>
 <script>
-var ctx = document.getElementById('memberProgressChart').getContext('2d');
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [{% for r in member_progress|reverse %}"{{ r.date.strftime('%d %b') if r.date else '' }}"{% if not loop.last %},{% endif %}{% endfor %}],
-        datasets: [{
-            label: 'Weight (kg)',
-            data: [{% for r in member_progress|reverse %}{{ r.weight }}{% if not loop.last %},{% endif %}{% endfor %}],
-            borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.08)',
-            borderWidth: 2, fill: true, tension: 0.4,
-            pointBackgroundColor: '#10B981', pointRadius: 3
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: '#8B949E' } } },
-        scales: {
-            x: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } },
-            y: { ticks: { color: '#8B949E', beginAtZero: false }, grid: { color: '#21262D' } }
-        }
-    }
-});
+var ctx=document.getElementById("memberProgressChart").getContext("2d");
+new Chart(ctx,{type:"line",data:{labels:[{% for r in member_progress|reverse %}"{{ r.date.strftime("%d %b") if r.date else "" }}"{% if not loop.last %},{% endif %}{% endfor %}],datasets:[{label:"Weight (kg)",data:[{% for r in member_progress|reverse %}{{ r.weight }}{% if not loop.last %},{% endif %}{% endfor %}],borderColor:"#10B981",backgroundColor:"rgba(16,185,129,0.08)",borderWidth:2,fill:true,tension:0.4,pointBackgroundColor:"#10B981",pointRadius:3}]},options:{responsive:true,plugins:{legend:{labels:{color:"#8B949E"}}},scales:{x:{ticks:{color:"#8B949E"},grid:{color:"#21262D"}},y:{ticks:{color:"#8B949E",beginAtZero:false},grid:{color:"#21262D"}}}}});
 </script>
 {% endif %}
+<script>function switchTab(name,btn){document.querySelectorAll(".dash-panel").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".dash-tab").forEach(b=>b.classList.remove("active"));document.getElementById("tab-"+name).classList.add("active");btn.classList.add("active");}</script>
 {% endblock %}

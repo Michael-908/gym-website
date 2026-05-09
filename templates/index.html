@@ -1,283 +1,142 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard - Gym Management System{% endblock %}
 
+{% block extra_css %}
+<style>
+.dash-tabs{display:flex;gap:4px;margin-bottom:24px;background:#161B22;border:1px solid #30363D;border-radius:10px;padding:5px;}
+.dash-tab{padding:8px 18px;border-radius:7px;border:none;background:transparent;color:#8B949E;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:7px;}
+.dash-tab:hover{color:#E6EDF3;background:#21262D;}
+.dash-tab.active{background:#1A73E8;color:#fff;}
+.dash-panel{display:none;}
+.dash-panel.active{display:block;}
+</style>
+{% endblock %}
+
 {% block content %}
-
-<!-- Page Header -->
-<div style="margin-bottom:24px;">
-    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
-        Welcome back, {{ current_user.username }}! 👋
-    </h4>
-    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">
-        <i class="fas fa-calendar-day" style="margin-right:5px;"></i>
-        Admin Dashboard — Full system overview
-    </p>
+<div style="margin-bottom:20px;">
+    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">Welcome back, {{ current_user.username }}! 👋</h4>
+    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;"><i class="fas fa-calendar-day" style="margin-right:5px;"></i>Admin Dashboard — Full system overview</p>
 </div>
 
-<!-- Stats Row -->
-<div class="t-stats">
-    <div class="t-stat-card blue">
-        <div>
-            <div class="t-stat-label">Total Members</div>
-            <div class="t-stat-value">{{ total_members }}</div>
-        </div>
-        <div class="t-stat-icon"><i class="fas fa-users"></i></div>
-    </div>
-    <div class="t-stat-card green">
-        <div>
-            <div class="t-stat-label">Active Members</div>
-            <div class="t-stat-value">{{ active_members }}</div>
-        </div>
-        <div class="t-stat-icon"><i class="fas fa-user-check"></i></div>
-    </div>
-    <div class="t-stat-card yellow">
-        <div>
-            <div class="t-stat-label">Total Trainers</div>
-            <div class="t-stat-value">{{ total_trainers }}</div>
-        </div>
-        <div class="t-stat-icon"><i class="fas fa-user-tie"></i></div>
-    </div>
-    <div class="t-stat-card purple">
-        <div>
-            <div class="t-stat-label">Total Revenue</div>
-            <div class="t-stat-value" style="font-size:1.2rem;">KSh {{ "%.0f"|format(total_payments) }}</div>
-        </div>
-        <div class="t-stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-    </div>
+<div class="t-stats" style="margin-bottom:20px;">
+    <div class="t-stat-card blue"><div><div class="t-stat-label">Total Members</div><div class="t-stat-value">{{ total_members }}</div></div><div class="t-stat-icon"><i class="fas fa-users"></i></div></div>
+    <div class="t-stat-card green"><div><div class="t-stat-label">Active Members</div><div class="t-stat-value">{{ active_members }}</div></div><div class="t-stat-icon"><i class="fas fa-user-check"></i></div></div>
+    <div class="t-stat-card yellow"><div><div class="t-stat-label">Total Trainers</div><div class="t-stat-value">{{ total_trainers }}</div></div><div class="t-stat-icon"><i class="fas fa-user-tie"></i></div></div>
+    <div class="t-stat-card purple"><div><div class="t-stat-label">Total Revenue</div><div class="t-stat-value" style="font-size:1.2rem;">KSh {{ "%.0f"|format(total_payments) }}</div></div><div class="t-stat-icon"><i class="fas fa-money-bill-wave"></i></div></div>
 </div>
 
-<!-- Quick Actions -->
-<div class="t-card mb-20" style="margin-bottom:20px;">
-    <div class="t-card-header">
-        <span><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i>Quick Actions</span>
+<div class="dash-tabs">
+    <button class="dash-tab active" onclick="switchTab('overview',this)"><i class="fas fa-tachometer-alt"></i> Overview</button>
+    <button class="dash-tab" onclick="switchTab('members',this)"><i class="fas fa-users"></i> Members &amp; Trainers</button>
+    <button class="dash-tab" onclick="switchTab('payments',this)"><i class="fas fa-money-bill-wave"></i> Payments</button>
+    <button class="dash-tab" onclick="switchTab('attendance',this)"><i class="fas fa-calendar-check"></i> Attendance</button>
+</div>
+
+<div id="tab-overview" class="dash-panel active">
+    <div class="t-card" style="margin-bottom:20px;">
+        <div class="t-card-header"><span><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i>Quick Actions</span></div>
+        <div class="t-card-body">
+            <div class="t-quick-actions">
+                <a href="{{ url_for('members') }}"    class="t-btn t-btn-primary"><i class="fas fa-user-plus"></i> Add Member</a>
+                <a href="{{ url_for('trainers') }}"   class="t-btn t-btn-info"><i class="fas fa-user-tie"></i> Add Trainer</a>
+                <a href="{{ url_for('attendance') }}" class="t-btn t-btn-success"><i class="fas fa-calendar-check"></i> Attendance</a>
+                <a href="{{ url_for('payments') }}"   class="t-btn t-btn-warning"><i class="fas fa-money-bill"></i> Payments</a>
+                <a href="{{ url_for('workouts') }}"   class="t-btn t-btn-secondary"><i class="fas fa-running"></i> Workouts</a>
+                <a href="{{ url_for('reports') }}"    class="t-btn t-btn-secondary"><i class="fas fa-chart-bar"></i> Reports</a>
+            </div>
+        </div>
     </div>
-    <div class="t-card-body">
-        <div class="t-quick-actions">
-            <a href="{{ url_for('members') }}" class="t-btn t-btn-primary">
-                <i class="fas fa-user-plus"></i> Add Member
-            </a>
-            <a href="{{ url_for('trainers') }}" class="t-btn t-btn-info">
-                <i class="fas fa-user-tie"></i> Add Trainer
-            </a>
-            <a href="{{ url_for('attendance') }}" class="t-btn t-btn-success">
-                <i class="fas fa-calendar-check"></i> Attendance
-            </a>
-            <a href="{{ url_for('payments') }}" class="t-btn t-btn-warning">
-                <i class="fas fa-money-bill"></i> Payments
-            </a>
-            <a href="{{ url_for('workouts') }}" class="t-btn t-btn-secondary">
-                <i class="fas fa-running"></i> Workouts
-            </a>
-            <a href="{{ url_for('reports') }}" class="t-btn t-btn-secondary">
-                <i class="fas fa-chart-bar"></i> Reports
-            </a>
+    <div class="t-grid-2">
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-users" style="margin-right:8px;color:#1A73E8;"></i>Members Overview</span><a href="{{ url_for('members') }}" class="t-btn t-btn-sm t-btn-primary">View All</a></div>
+            <div class="t-card-body" style="padding:0;"><table class="t-table"><thead><tr><th>Metric</th><th>Count</th><th>Status</th></tr></thead><tbody>
+                <tr><td>Total Members</td><td><strong style="color:#E6EDF3;">{{ total_members }}</strong></td><td><span class="t-badge t-badge-primary">All</span></td></tr>
+                <tr><td>Active Members</td><td><strong style="color:#10B981;">{{ active_members }}</strong></td><td><span class="t-badge t-badge-success">Active</span></td></tr>
+                <tr><td>Inactive Members</td><td><strong style="color:#F85149;">{{ total_members - active_members }}</strong></td><td><span class="t-badge t-badge-danger">Inactive</span></td></tr>
+            </tbody></table></div>
+        </div>
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-user-tie" style="margin-right:8px;color:#F59E0B;"></i>Trainers Overview</span><a href="{{ url_for('trainers') }}" class="t-btn t-btn-sm t-btn-warning">View All</a></div>
+            <div class="t-card-body" style="padding:0;"><table class="t-table"><thead><tr><th>Metric</th><th>Count</th><th>Status</th></tr></thead><tbody>
+                <tr><td>Total Trainers</td><td><strong style="color:#E6EDF3;">{{ total_trainers }}</strong></td><td><span class="t-badge t-badge-info">Active</span></td></tr>
+                <tr><td>Total Classes</td><td><strong style="color:#E6EDF3;">{{ total_classes }}</strong></td><td><span class="t-badge t-badge-primary">Scheduled</span></td></tr>
+                <tr><td>Total Workouts</td><td><strong style="color:#E6EDF3;">{{ total_workouts }}</strong></td><td><span class="t-badge t-badge-secondary">Plans</span></td></tr>
+            </tbody></table></div>
         </div>
     </div>
 </div>
 
-<!-- Two Column: Recent Members + Trainers Overview -->
-<div class="t-grid-2" style="margin-bottom:20px;">
-
-    <!-- Recent Members -->
-    <div class="t-card">
-        <div class="t-card-header">
-            <span><i class="fas fa-users" style="margin-right:8px;color:#1A73E8;"></i>Members Overview</span>
-            <a href="{{ url_for('members') }}" class="t-btn t-btn-sm t-btn-primary">View All</a>
+<div id="tab-members" class="dash-panel">
+    <div class="t-grid-2">
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-users" style="margin-right:8px;color:#1A73E8;"></i>Members</span><a href="{{ url_for('members') }}" class="t-btn t-btn-sm t-btn-primary">Manage</a></div>
+            <div class="t-card-body" style="padding:0;"><table class="t-table"><thead><tr><th>Metric</th><th>Count</th><th></th></tr></thead><tbody>
+                <tr><td>Total</td><td><strong style="color:#E6EDF3;">{{ total_members }}</strong></td><td><span class="t-badge t-badge-primary">All</span></td></tr>
+                <tr><td>Active</td><td><strong style="color:#10B981;">{{ active_members }}</strong></td><td><span class="t-badge t-badge-success">Active</span></td></tr>
+                <tr><td>Inactive</td><td><strong style="color:#F85149;">{{ total_members - active_members }}</strong></td><td><span class="t-badge t-badge-danger">Inactive</span></td></tr>
+            </tbody></table></div>
         </div>
-        <div class="t-card-body" style="padding:0;">
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Metric</th>
-                        <th>Count</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Total Members</td>
-                        <td><strong style="color:#E6EDF3;">{{ total_members }}</strong></td>
-                        <td><span class="t-badge t-badge-primary">All</span></td>
-                    </tr>
-                    <tr>
-                        <td>Active Members</td>
-                        <td><strong style="color:#10B981;">{{ active_members }}</strong></td>
-                        <td><span class="t-badge t-badge-success">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>Inactive Members</td>
-                        <td><strong style="color:#F85149;">{{ total_members - active_members }}</strong></td>
-                        <td><span class="t-badge t-badge-danger">Inactive</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Trainers Overview -->
-    <div class="t-card">
-        <div class="t-card-header">
-            <span><i class="fas fa-user-tie" style="margin-right:8px;color:#F59E0B;"></i>Trainers Overview</span>
-            <a href="{{ url_for('trainers') }}" class="t-btn t-btn-sm t-btn-warning">View All</a>
-        </div>
-        <div class="t-card-body" style="padding:0;">
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Metric</th>
-                        <th>Count</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Total Trainers</td>
-                        <td><strong style="color:#E6EDF3;">{{ total_trainers }}</strong></td>
-                        <td><span class="t-badge t-badge-info">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>Total Classes</td>
-                        <td><strong style="color:#E6EDF3;">{{ total_classes }}</strong></td>
-                        <td><span class="t-badge t-badge-primary">Scheduled</span></td>
-                    </tr>
-                    <tr>
-                        <td>Total Workouts</td>
-                        <td><strong style="color:#E6EDF3;">{{ total_workouts }}</strong></td>
-                        <td><span class="t-badge t-badge-secondary">Plans</span></td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-user-tie" style="margin-right:8px;color:#F59E0B;"></i>Trainers</span><a href="{{ url_for('trainers') }}" class="t-btn t-btn-sm t-btn-warning">Manage</a></div>
+            <div class="t-card-body" style="padding:0;"><table class="t-table"><thead><tr><th>Metric</th><th>Count</th><th></th></tr></thead><tbody>
+                <tr><td>Total Trainers</td><td><strong style="color:#E6EDF3;">{{ total_trainers }}</strong></td><td><span class="t-badge t-badge-info">Active</span></td></tr>
+                <tr><td>Classes</td><td><strong style="color:#E6EDF3;">{{ total_classes }}</strong></td><td><span class="t-badge t-badge-primary">Scheduled</span></td></tr>
+                <tr><td>Workouts</td><td><strong style="color:#E6EDF3;">{{ total_workouts }}</strong></td><td><span class="t-badge t-badge-secondary">Plans</span></td></tr>
+            </tbody></table></div>
         </div>
     </div>
 </div>
 
-<!-- Revenue & Attendance Row -->
-<div class="t-grid-2" style="margin-bottom:20px;">
-
-    <!-- Revenue Summary -->
-    <div class="t-card">
-        <div class="t-card-header">
-            <span><i class="fas fa-money-bill-wave" style="margin-right:8px;color:#10B981;"></i>Revenue Summary</span>
-            <a href="{{ url_for('payments') }}" class="t-btn t-btn-sm t-btn-success">View Payments</a>
+<div id="tab-payments" class="dash-panel">
+    <div class="t-grid-2">
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-money-bill-wave" style="margin-right:8px;color:#10B981;"></i>Revenue Summary</span><a href="{{ url_for('payments') }}" class="t-btn t-btn-sm t-btn-success">View Payments</a></div>
+            <div class="t-card-body" style="padding:0;"><table class="t-table"><thead><tr><th>Method</th><th>Amount (KSh)</th></tr></thead><tbody>
+                <tr><td><span class="t-badge t-badge-primary">Cash</span></td><td><strong style="color:#E6EDF3;">{{ "%.2f"|format(cash_revenue) }}</strong></td></tr>
+                <tr><td><span class="t-badge t-badge-success">M-Pesa</span></td><td><strong style="color:#E6EDF3;">{{ "%.2f"|format(mpesa_revenue) }}</strong></td></tr>
+                <tr><td><span class="t-badge t-badge-info">Stripe / Card</span></td><td><strong style="color:#E6EDF3;">{{ "%.2f"|format(card_revenue) }}</strong></td></tr>
+                <tr style="border-top:1px solid #30363D;"><td><strong style="color:#E6EDF3;">Total</strong></td><td><strong style="color:#10B981;font-size:1rem;">{{ "%.2f"|format(total_payments) }}</strong></td></tr>
+            </tbody></table></div>
         </div>
-        <div class="t-card-body" style="padding:0;">
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Method</th>
-                        <th>Amount (KSh)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><span class="t-badge t-badge-primary">Cash</span></td>
-                        <td><strong style="color:#E6EDF3;">{{ "%.2f"|format(cash_revenue) }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td><span class="t-badge t-badge-success">M-Pesa</span></td>
-                        <td><strong style="color:#E6EDF3;">{{ "%.2f"|format(mpesa_revenue) }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td><span class="t-badge t-badge-info">Stripe/Card</span></td>
-                        <td><strong style="color:#E6EDF3;">{{ "%.2f"|format(card_revenue) }}</strong></td>
-                    </tr>
-                    <tr style="border-top:1px solid #30363D;">
-                        <td><strong style="color:#E6EDF3;">Total</strong></td>
-                        <td><strong style="color:#10B981;font-size:1rem;">{{ "%.2f"|format(total_payments) }}</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Recent Payments -->
-    <div class="t-card">
-        <div class="t-card-header">
-            <span><i class="fas fa-receipt" style="margin-right:8px;color:#8B5CF6;"></i>Recent Payments</span>
-            <a href="{{ url_for('payments') }}" class="t-btn t-btn-sm t-btn-secondary">All Payments</a>
-        </div>
-        <div class="t-card-body" style="padding:0;">
-            <table class="t-table">
-                <thead>
-                    <tr>
-                        <th>Member</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payment in recent_payments %}
-                    <tr>
-                        <td>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">
-                                    {{ payment.member.name[0].upper() if payment.member else '?' }}
-                                </div>
-                                {{ payment.member.name if payment.member else 'N/A' }}
-                            </div>
-                        </td>
-                        <td>KSh {{ "%.2f"|format(payment.amount) }}</td>
-                        <td>
-                            <span class="t-badge t-badge-success">{{ payment.status }}</span>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="3" style="text-align:center;color:#8B949E;padding:20px;">No payments yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Attendance -->
-<div class="t-card">
-    <div class="t-card-header">
-        <span><i class="fas fa-calendar-check" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance</span>
-        <a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a>
-    </div>
-    <div class="t-card-body" style="padding:0;overflow-x:auto;">
-        <table class="t-table">
-            <thead>
+        <div class="t-card">
+            <div class="t-card-header"><span><i class="fas fa-receipt" style="margin-right:8px;color:#8B5CF6;"></i>Recent Payments</span><a href="{{ url_for('payments') }}" class="t-btn t-btn-sm t-btn-secondary">All Payments</a></div>
+            <div class="t-card-body" style="padding:0;"><table class="t-table"><thead><tr><th>Member</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+                {% for payment in recent_payments %}
                 <tr>
-                    <th>#</th>
-                    <th>Member</th>
-                    <th>Date</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Status</th>
+                    <td><div style="display:flex;align-items:center;gap:8px;"><div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">{{ payment.member.name[0].upper() if payment.member else '?' }}</div>{{ payment.member.name if payment.member else 'N/A' }}</div></td>
+                    <td>KSh {{ "%.2f"|format(payment.amount) }}</td>
+                    <td><span class="t-badge t-badge-success">{{ payment.status }}</span></td>
                 </tr>
-            </thead>
+                {% else %}<tr><td colspan="3" style="text-align:center;color:#8B949E;padding:20px;">No payments yet.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </div>
+    </div>
+</div>
+
+<div id="tab-attendance" class="dash-panel">
+    <div class="t-card">
+        <div class="t-card-header"><span><i class="fas fa-calendar-check" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance</span><a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a></div>
+        <div class="t-card-body" style="padding:0;overflow-x:auto;"><table class="t-table">
+            <thead><tr><th>#</th><th>Member</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead>
             <tbody>
                 {% for record in recent_attendance %}
                 <tr>
                     <td>{{ loop.index }}</td>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">
-                                {{ record.member.name[0].upper() if record.member else '?' }}
-                            </div>
-                            {{ record.member.name if record.member else 'N/A' }}
-                        </div>
-                    </td>
+                    <td><div style="display:flex;align-items:center;gap:8px;"><div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">{{ record.member.name[0].upper() if record.member else '?' }}</div>{{ record.member.name if record.member else 'N/A' }}</div></td>
                     <td>{{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}</td>
                     <td>{{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}</td>
                     <td>{{ record.check_out.strftime('%I:%M %p') if record.check_out else '—' }}</td>
-                    <td>
-                        {% if record.check_out %}
-                            <span class="t-badge t-badge-secondary">Checked Out</span>
-                        {% else %}
-                            <span class="t-badge t-badge-success">Present</span>
-                        {% endif %}
-                    </td>
+                    <td>{% if record.check_out %}<span class="t-badge t-badge-secondary">Checked Out</span>{% else %}<span class="t-badge t-badge-success">Present</span>{% endif %}</td>
                 </tr>
-                {% else %}
-                <tr><td colspan="6" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>
-                {% endfor %}
+                {% else %}<tr><td colspan="6" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>{% endfor %}
             </tbody>
-        </table>
+        </table></div>
     </div>
 </div>
 
+{% endblock %}
+{% block extra_js %}
+<script>
+function switchTab(name,btn){document.querySelectorAll('.dash-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.dash-tab').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');}
+</script>
 {% endblock %}
