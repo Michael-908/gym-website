@@ -3,164 +3,257 @@
 
 {% block content %}
 
-<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div>
-        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
-            <i class="fas fa-chart-line" style="color:#10B981;margin-right:8px;"></i>My Progress
-        </h4>
-        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Track your weight, BMI and strength improvements over time.</p>
-    </div>
-    <button class="m-btn m-btn-success" data-toggle="modal" data-target="#addProgressModal">
-        <i class="fas fa-plus"></i> Add Record
+<!-- Tabs -->
+<div style="display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;">
+    <button onclick="showTab('weight')" id="tab-weight"
+            style="padding:8px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:600;font-size:0.82rem;
+                   background:#1A73E8;color:#fff;white-space:nowrap;">
+        <i class="fas fa-weight mr-1"></i> Weight & BMI
+    </button>
+    <button onclick="showTab('measurements')" id="tab-measurements"
+            style="padding:8px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:600;font-size:0.82rem;
+                   background:#21262D;color:#8B949E;white-space:nowrap;">
+        <i class="fas fa-ruler mr-1"></i> Body Measurements
     </button>
 </div>
 
-{% if records %}
-<!-- Stats Summary -->
-<div class="m-stats" style="grid-template-columns:repeat(3,1fr);">
-    <div class="m-stat-card green">
-        <div>
-            <div class="m-stat-label">Latest Weight</div>
-            <div class="m-stat-value">{{ records[0].weight }} <span style="font-size:1rem;">kg</span></div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-weight"></i></div>
-    </div>
-    <div class="m-stat-card blue">
-        <div>
-            <div class="m-stat-label">Latest BMI</div>
-            <div class="m-stat-value">{{ "%.1f"|format(records[0].bmi) if records[0].bmi else '—' }}</div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-heartbeat"></i></div>
-    </div>
-    <div class="m-stat-card purple">
-        <div>
-            <div class="m-stat-label">Total Records</div>
-            <div class="m-stat-value">{{ records|length }}</div>
-        </div>
-        <div class="m-stat-icon"><i class="fas fa-list-ol"></i></div>
-    </div>
-</div>
-
-<!-- Chart -->
-<div class="m-card" style="margin-bottom:20px;">
-    <div class="m-card-header">
-        <span><i class="fas fa-chart-area" style="margin-right:8px;color:#10B981;"></i>Weight Progress Chart</span>
-    </div>
-    <div class="m-card-body">
-        <canvas id="progressChart" height="100"></canvas>
-    </div>
-</div>
-{% endif %}
-
-<!-- Progress Table -->
-<div class="m-card">
-    <div class="m-card-header">
-        <span><i class="fas fa-table" style="margin-right:8px;color:#10B981;"></i>All Records</span>
-        <span class="m-badge m-badge-success">{{ records|length }} records</span>
-    </div>
-    <div style="overflow-x:auto;">
-        {% if records %}
-        <table class="m-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Date</th>
-                    <th>Weight</th>
-                    <th>BMI</th>
-                    <th>BMI Category</th>
-                    <th>Strength Score</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in records %}
-                <tr>
-                    <td style="color:#8B949E;">{{ loop.index }}</td>
-                    <td style="color:#C9D1D9;font-size:0.82rem;">
-                        {{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}
-                    </td>
-                    <td>
-                        <span style="color:#E6EDF3;font-weight:700;">{{ record.weight }}</span>
-                        <span style="color:#8B949E;font-size:0.75rem;"> kg</span>
-                    </td>
-                    <td>
-                        {% if record.bmi %}
-                        <span style="color:#E6EDF3;font-weight:700;">{{ "%.1f"|format(record.bmi) }}</span>
-                        {% else %}
-                        <span style="color:#8B949E;">N/A</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if record.bmi %}
-                            {% if record.bmi < 18.5 %}<span class="m-badge m-badge-warning">Underweight</span>
-                            {% elif record.bmi < 25 %}<span class="m-badge m-badge-success">Normal</span>
-                            {% elif record.bmi < 30 %}<span class="m-badge m-badge-warning">Overweight</span>
-                            {% else %}<span class="m-badge m-badge-danger">Obese</span>
-                            {% endif %}
-                        {% else %}
-                        <span style="color:#8B949E;">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if record.strength_score %}
-                        <span style="color:#8B5CF6;font-weight:600;">{{ record.strength_score }}</span>
-                        <span style="color:#8B949E;font-size:0.75rem;"> kg</span>
-                        {% else %}
-                        <span style="color:#8B949E;">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div style="padding:60px;text-align:center;color:#8B949E;">
-            <i class="fas fa-chart-bar" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
-            <p style="margin-bottom:16px;">No progress records yet. Add your first measurement!</p>
-            <button class="m-btn m-btn-success" data-toggle="modal" data-target="#addProgressModal">
-                <i class="fas fa-plus"></i> Add First Record
+<!-- Weight & BMI Tab -->
+<div id="content-weight">
+    <div class="member-card mb-4">
+        <div class="member-card-header">
+            <span><i class="fas fa-chart-line mr-2"></i>Weight & BMI</span>
+            <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addProgressModal">
+                <i class="fas fa-plus mr-1"></i> Add Record
             </button>
         </div>
-        {% endif %}
+        <div class="member-card-body">
+            {% if records %}
+            <canvas id="progressChart" height="160" class="mb-4"></canvas>
+                {% for record in records %}
+                <div class="member-list-item">
+                    <div style="flex:1;">
+                        <div class="font-weight-bold text-white">
+                            {{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}
+                        </div>
+                        <div class="text-white-50 small">
+                            <i class="fas fa-weight mr-1"></i>
+                            <strong class="text-white">{{ record.weight }} kg</strong>
+                            &nbsp;·&nbsp; BMI:
+                            <strong class="text-white">{{ "%.1f"|format(record.bmi) if record.bmi else 'N/A' }}</strong>
+                            {% if record.bmi %}
+                                {% if record.bmi < 18.5 %}<span class="badge badge-warning ml-1">Underweight</span>
+                                {% elif record.bmi < 25 %}<span class="badge badge-success ml-1">Normal</span>
+                                {% elif record.bmi < 30 %}<span class="badge badge-warning ml-1">Overweight</span>
+                                {% else %}<span class="badge badge-danger ml-1">Obese</span>{% endif %}
+                            {% endif %}
+                            {% if record.strength_score %}
+                            &nbsp;·&nbsp; Strength: <strong class="text-white">{{ record.strength_score }} kg</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="text-center text-white-50 py-4">
+                <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                <p>No records yet. Add your first measurement!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Body Measurements Tab -->
+<div id="content-measurements" style="display:none;">
+    <div class="member-card mb-4">
+        <div class="member-card-header">
+            <span><i class="fas fa-ruler mr-2"></i>Body Measurements</span>
+            <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addMeasurementModal">
+                <i class="fas fa-plus mr-1"></i> Add
+            </button>
+        </div>
+        <div class="member-card-body">
+
+            <!-- Latest measurement display -->
+            {% if measurements %}
+            {% set latest = measurements[0] %}
+            <div style="background:#0D1117;border-radius:12px;padding:16px;margin-bottom:16px;">
+                <div style="font-size:0.7rem;font-weight:700;color:#8B949E;text-transform:uppercase;
+                            letter-spacing:1px;margin-bottom:12px;">
+                    Latest — {{ latest.date.strftime('%d %b %Y') if latest.date else '' }}
+                </div>
+                <div class="row text-center">
+                    {% if latest.chest %}
+                    <div class="col-4 col-md-2 mb-3">
+                        <div style="font-size:1.2rem;font-weight:800;color:#1A73E8;">{{ latest.chest }}</div>
+                        <div style="font-size:0.7rem;color:#8B949E;">Chest (cm)</div>
+                    </div>
+                    {% endif %}
+                    {% if latest.waist %}
+                    <div class="col-4 col-md-2 mb-3">
+                        <div style="font-size:1.2rem;font-weight:800;color:#10B981;">{{ latest.waist }}</div>
+                        <div style="font-size:0.7rem;color:#8B949E;">Waist (cm)</div>
+                    </div>
+                    {% endif %}
+                    {% if latest.hips %}
+                    <div class="col-4 col-md-2 mb-3">
+                        <div style="font-size:1.2rem;font-weight:800;color:#F59E0B;">{{ latest.hips }}</div>
+                        <div style="font-size:0.7rem;color:#8B949E;">Hips (cm)</div>
+                    </div>
+                    {% endif %}
+                    {% if latest.thighs %}
+                    <div class="col-4 col-md-2 mb-3">
+                        <div style="font-size:1.2rem;font-weight:800;color:#8B5CF6;">{{ latest.thighs }}</div>
+                        <div style="font-size:0.7rem;color:#8B949E;">Thighs (cm)</div>
+                    </div>
+                    {% endif %}
+                    {% if latest.arms %}
+                    <div class="col-4 col-md-2 mb-3">
+                        <div style="font-size:1.2rem;font-weight:800;color:#36B9CC;">{{ latest.arms }}</div>
+                        <div style="font-size:0.7rem;color:#8B949E;">Arms (cm)</div>
+                    </div>
+                    {% endif %}
+                    {% if latest.body_fat_pct %}
+                    <div class="col-4 col-md-2 mb-3">
+                        <div style="font-size:1.2rem;font-weight:800;color:#F85149;">{{ latest.body_fat_pct }}%</div>
+                        <div style="font-size:0.7rem;color:#8B949E;">Body Fat</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- History -->
+            {% for m in measurements %}
+            <div class="member-list-item">
+                <div style="flex:1;">
+                    <div class="font-weight-bold text-white small">
+                        {{ m.date.strftime('%d %b %Y') if m.date else 'N/A' }}
+                    </div>
+                    <div class="text-white-50" style="font-size:0.75rem;">
+                        {% if m.chest %}Chest: {{ m.chest }}cm &nbsp;{% endif %}
+                        {% if m.waist %}Waist: {{ m.waist }}cm &nbsp;{% endif %}
+                        {% if m.hips %}Hips: {{ m.hips }}cm &nbsp;{% endif %}
+                        {% if m.arms %}Arms: {{ m.arms }}cm &nbsp;{% endif %}
+                        {% if m.body_fat_pct %}Body Fat: {{ m.body_fat_pct }}%{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% else %}
+            <div class="text-center text-white-50 py-4">
+                <i class="fas fa-ruler fa-2x mb-2"></i>
+                <p>No measurements yet. Track your body composition!</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <!-- Add Progress Modal -->
 <div class="modal fade" id="addProgressModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-chart-line" style="color:#10B981;margin-right:8px;"></i>Add Progress Record
-                </h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
+            <div class="modal-header" style="border-bottom:1px solid #30363D;">
+                <h5 class="modal-title text-white"><i class="fas fa-chart-line mr-2"></i>Add Progress Record</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('add_my_progress') }}">
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-6">
                             <div class="form-group">
-                                <label>Weight (kg) <span style="color:#F85149;">*</span></label>
-                                <input type="number" step="0.1" class="form-control" name="weight" required placeholder="75.5">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Weight (kg) *</label>
+                                <input type="number" step="0.1" class="form-control" name="weight" required
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-6">
                             <div class="form-group">
-                                <label>Height (cm) — for BMI <span style="color:#F85149;">*</span></label>
-                                <input type="number" step="0.1" class="form-control" name="height" required placeholder="175">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Height (cm) *</label>
+                                <input type="number" step="0.1" class="form-control" name="height" required
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Strength Score (optional)</label>
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Strength Score (optional)</label>
                         <input type="number" step="0.1" class="form-control" name="strength_score"
-                               placeholder="e.g. max bench press in kg">
+                               placeholder="e.g. max bench press in kg"
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="m-btn m-btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="m-btn m-btn-success">
-                        <i class="fas fa-save"></i> Save Record
-                    </button>
+                <div class="modal-footer" style="border-top:1px solid #30363D;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save mr-1"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Measurements Modal -->
+<div class="modal fade" id="addMeasurementModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
+            <div class="modal-header" style="border-bottom:1px solid #30363D;">
+                <h5 class="modal-title text-white"><i class="fas fa-ruler mr-2"></i>Add Body Measurements</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_measurement') }}">
+                <div class="modal-body">
+                    <p style="color:#8B949E;font-size:0.8rem;margin-bottom:14px;">
+                        <i class="fas fa-info-circle mr-1" style="color:#1A73E8;"></i>
+                        All fields are optional. Enter measurements in centimetres (cm).
+                    </p>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Chest (cm)</label>
+                                <input type="number" step="0.1" class="form-control" name="chest"
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Waist (cm)</label>
+                                <input type="number" step="0.1" class="form-control" name="waist"
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Hips (cm)</label>
+                                <input type="number" step="0.1" class="form-control" name="hips"
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Thighs (cm)</label>
+                                <input type="number" step="0.1" class="form-control" name="thighs"
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Arms (cm)</label>
+                                <input type="number" step="0.1" class="form-control" name="arms"
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Body Fat %</label>
+                                <input type="number" step="0.1" class="form-control" name="body_fat_pct"
+                                       style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #30363D;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-save mr-1"></i> Save Measurements</button>
                 </div>
             </form>
         </div>
@@ -170,6 +263,20 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+function showTab(tab) {
+    ['weight','measurements'].forEach(function(t) {
+        document.getElementById('content-' + t).style.display = 'none';
+        var btn = document.getElementById('tab-' + t);
+        btn.style.background = '#21262D';
+        btn.style.color = '#8B949E';
+    });
+    document.getElementById('content-' + tab).style.display = 'block';
+    var active = document.getElementById('tab-' + tab);
+    active.style.background = '#1A73E8';
+    active.style.color = '#fff';
+}
+</script>
 {% if records %}
 <script src="{{ url_for('static', filename='vendor/chart.js/Chart.min.js') }}"></script>
 <script>
@@ -181,17 +288,16 @@ new Chart(ctx, {
         datasets: [{
             label: 'Weight (kg)',
             data: [{% for r in records|reverse %}{{ r.weight }}{% if not loop.last %},{% endif %}{% endfor %}],
-            borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.08)',
-            borderWidth: 2, fill: true, tension: 0.4,
-            pointBackgroundColor: '#10B981', pointRadius: 4
+            borderColor: '#1A73E8', backgroundColor: 'rgba(26,115,232,0.1)',
+            borderWidth: 2, fill: true, tension: 0.4
         }]
     },
     options: {
         responsive: true,
-        plugins: { legend: { labels: { color: '#8B949E' } } },
+        plugins: { legend: { labels: { color: '#fff' } } },
         scales: {
-            x: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } },
-            y: { ticks: { color: '#8B949E', beginAtZero: false }, grid: { color: '#21262D' } }
+            x: { ticks: { color: '#9CA3AF' }, grid: { color: '#374151' } },
+            y: { ticks: { color: '#9CA3AF' }, grid: { color: '#374151' } }
         }
     }
 });

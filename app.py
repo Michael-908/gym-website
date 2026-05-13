@@ -1,15 +1,16 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, abort
+from flask import Flask, render_template, redirect, url_for, flash, request, abort, jsonify, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
 from flask_mail import Mail, Message
 from models import (db, User, Member, Trainer, Workout, Nutrition, Attendance,
                     Payment, Progress, Class, ClassBooking, MembershipPlan,
-                    MemberWorkout, WorkoutComment, NutritionComment)
+                    MemberWorkout, WorkoutComment, NutritionComment, MpesaTransaction,
+                    WorkoutLog, BodyMeasurement, TrainerRating)
 from dotenv import load_dotenv
 from functools import wraps
-import os
-import stripe
-from datetime import datetime, timedelta
+import os, stripe, requests, base64, json, io
+from datetime import datetime, timedelta, date
+from fpdf import FPDF
 
 app = Flask(__name__)
 load_dotenv()
@@ -21,42 +22,44 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SECURE']       = False
 app.config['SESSION_COOKIE_HTTPONLY']     = True
 app.config['SESSION_COOKIE_SAMESITE']     = 'Lax'
-app.config['REMEMBER_COOKIE_DURATION']    = 3600
 
 # Stripe
 app.config['STRIPE_PUBLIC_KEY']  = os.getenv('STRIPE_PUBLIC_KEY')
 app.config['STRIPE_SECRET_KEY']  = os.getenv('STRIPE_SECRET_KEY')
 stripe.api_key = app.config['STRIPE_SECRET_KEY'] or ''
 
-# M-Pesa
-app.config['MPESA_CONSUMER_KEY']    = os.getenv('MPESA_CONSUMER_KEY')
-app.config['MPESA_CONSUMER_SECRET'] = os.getenv('MPESA_CONSUMER_SECRET')
-app.config['MPESA_SHORTCODE']       = os.getenv('MPESA_SHORTCODE')
-app.config['MPESA_PASSKEY']         = os.getenv('MPESA_PASSKEY')
+# M-Pesa Daraja
+app.config['MPESA_CONSUMER_KEY']    = os.getenv('MPESA_CONSUMER_KEY', '')
+app.config['MPESA_CONSUMER_SECRET'] = os.getenv('MPESA_CONSUMER_SECRET', '')
+app.config['MPESA_SHORTCODE']       = os.getenv('MPESA_SHORTCODE', '174379')
+app.config['MPESA_PASSKEY']         = os.getenv('MPESA_PASSKEY', '')
+app.config['MPESA_ENV']             = os.getenv('MPESA_ENV', 'sandbox')  # sandbox or production
+app.config['MPESA_CALLBACK_URL']    = os.getenv('MPESA_CALLBACK_URL', 'https://yourdomain.com/webhook/mpesa')
 
 # Email
 app.config['MAIL_SERVER']         = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT']           = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS']        = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_TLS']        = True
 app.config['MAIL_USERNAME']       = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD']       = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+# Anthropic (AI)
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 
 # ── Extensions ────────────────────────────────────────────────────────────────
 db.init_app(app)
 bcrypt = Bcrypt(app)
 mail   = Mail(app)
 
-# ── Seed DB ───────────────────────────────────────────────────────────────────
+# ── Init DB ───────────────────────────────────────────────────────────────────
 with app.app_context():
     db.create_all()
     if not MembershipPlan.query.first():
-        plans = [
-            MembershipPlan(name='Monthly',   price=30.0,  duration_days=30),
-            MembershipPlan(name='Quarterly', price=80.0,  duration_days=90),
-            MembershipPlan(name='Annual',    price=250.0, duration_days=365),
-        ]
-        db.session.add_all(plans)
+        db.session.add_all([
+            MembershipPlan(name='Monthly',   price=3000.0,  duration_days=30),
+            MembershipPlan(name='Quarterly', price=8000.0,  duration_days=90),
+            MembershipPlan(name='Annual',    price=25000.0, duration_days=365),
+        ])
         db.session.commit()
 
 # ── Login Manager ─────────────────────────────────────────────────────────────
@@ -92,7 +95,6 @@ def member_required(f):
     def decorated(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'member':
             return redirect(url_for('smart_redirect'))
-        # Auto-create member profile if missing
         member = Member.query.filter_by(user_id=current_user.id).first()
         if not member:
             member = Member(user_id=current_user.id, name=current_user.username,
@@ -102,7 +104,6 @@ def member_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ── Helper: smart redirect based on role ─────────────────────────────────────
 @app.route('/redirect')
 @login_required
 def smart_redirect():
@@ -112,6 +113,220 @@ def smart_redirect():
         return redirect(url_for('trainer_dashboard'))
     else:
         return redirect(url_for('member_dashboard'))
+
+# ── M-Pesa Helpers ────────────────────────────────────────────────────────────
+def get_mpesa_token():
+    env = app.config['MPESA_ENV']
+    base = 'https://sandbox.safaricom.co.ke' if env == 'sandbox' else 'https://api.safaricom.co.ke'
+    key    = app.config['MPESA_CONSUMER_KEY']
+    secret = app.config['MPESA_CONSUMER_SECRET']
+    if not key or not secret:
+        return None
+    creds = base64.b64encode(f'{key}:{secret}'.encode()).decode()
+    try:
+        r = requests.get(
+            f'{base}/oauth/v1/generate?grant_type=client_credentials',
+            headers={'Authorization': f'Basic {creds}'}, timeout=10
+        )
+        return r.json().get('access_token')
+    except Exception:
+        return None
+
+def stk_push(phone, amount, account_ref, description):
+    """Initiate M-Pesa STK Push. Returns (checkout_request_id, merchant_request_id) or (None, error_msg)."""
+    env = app.config['MPESA_ENV']
+    base = 'https://sandbox.safaricom.co.ke' if env == 'sandbox' else 'https://api.safaricom.co.ke'
+    token = get_mpesa_token()
+    if not token:
+        return None, 'Could not authenticate with M-Pesa. Check API credentials.'
+
+    shortcode = app.config['MPESA_SHORTCODE']
+    passkey   = app.config['MPESA_PASSKEY']
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    password  = base64.b64encode(f'{shortcode}{passkey}{timestamp}'.encode()).decode()
+
+    # Normalize phone: 0712... -> 254712...
+    phone = phone.strip().replace(' ', '').replace('-', '')
+    if phone.startswith('0'):
+        phone = '254' + phone[1:]
+    elif phone.startswith('+'):
+        phone = phone[1:]
+
+    payload = {
+        'BusinessShortCode': shortcode,
+        'Password': password,
+        'Timestamp': timestamp,
+        'TransactionType': 'CustomerPayBillOnline',
+        'Amount': int(amount),
+        'PartyA': phone,
+        'PartyB': shortcode,
+        'PhoneNumber': phone,
+        'CallBackURL': app.config['MPESA_CALLBACK_URL'],
+        'AccountReference': account_ref,
+        'TransactionDesc': description
+    }
+    try:
+        r = requests.post(
+            f'{base}/mpesa/stkpush/v1/processrequest',
+            json=payload,
+            headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+            timeout=15
+        )
+        data = r.json()
+        if data.get('ResponseCode') == '0':
+            return data.get('CheckoutRequestID'), data.get('MerchantRequestID')
+        return None, data.get('CustomerMessage', data.get('errorMessage', 'STK Push failed'))
+    except Exception as e:
+        return None, str(e)
+
+# ── Invoice Generator ─────────────────────────────────────────────────────────
+def generate_invoice_pdf(payment, member):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Header
+    pdf.set_fill_color(13, 17, 23)
+    pdf.rect(0, 0, 210, 40, 'F')
+    pdf.set_text_color(26, 115, 232)
+    pdf.set_font('Helvetica', 'B', 22)
+    pdf.set_xy(10, 10)
+    pdf.cell(0, 10, 'GYM MANAGEMENT SYSTEM', ln=True)
+    pdf.set_text_color(139, 148, 158)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.set_xy(10, 22)
+    pdf.cell(0, 8, 'Nairobi, Kenya  |  gym@example.com  |  +254 700 000 000', ln=True)
+
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(10, 50)
+
+    # Invoice title
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.set_text_color(26, 115, 232)
+    pdf.cell(0, 10, 'PAYMENT INVOICE', ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.ln(2)
+
+    inv_no = payment.invoice_number or f'INV-{payment.id:05d}'
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(50, 7, 'Invoice Number:')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 7, inv_no, ln=True)
+
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(50, 7, 'Invoice Date:')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 7, payment.payment_date.strftime('%d %B %Y') if payment.payment_date else 'N/A', ln=True)
+
+    if payment.expiry_date:
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(50, 7, 'Valid Until:')
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(0, 7, payment.expiry_date.strftime('%d %B %Y'), ln=True)
+
+    pdf.ln(6)
+
+    # Bill To
+    pdf.set_fill_color(230, 237, 243)
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.cell(0, 8, '  BILLED TO', fill=True, ln=True)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 7, f'  {member.name}', ln=True)
+    pdf.cell(0, 7, f'  {member.email or "—"}', ln=True)
+    pdf.cell(0, 7, f'  {member.phone or "—"}', ln=True)
+    if member.age:
+        pdf.cell(0, 7, f'  Age: {member.age} | Group: {member.age_group or "Adult"}', ln=True)
+    pdf.ln(4)
+
+    # Table header
+    pdf.set_fill_color(13, 17, 23)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(90, 9, '  Description', fill=True)
+    pdf.cell(40, 9, 'Method', fill=True, align='C')
+    pdf.cell(60, 9, 'Amount (KSh)', fill=True, align='R', ln=True)
+
+    # Table row
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_fill_color(245, 248, 252)
+    pdf.set_font('Helvetica', '', 10)
+    plan_name = payment.plan.name if payment.plan else 'Gym Membership'
+    pdf.cell(90, 9, f'  {plan_name} Membership', fill=True)
+    pdf.cell(40, 9, (payment.method or 'N/A').upper(), fill=True, align='C')
+    pdf.cell(60, 9, f'{payment.amount:,.2f}', fill=True, align='R', ln=True)
+
+    # M-Pesa receipt if available
+    if payment.mpesa_receipt:
+        pdf.set_fill_color(255, 255, 255)
+        pdf.cell(90, 9, '  M-Pesa Transaction Code')
+        pdf.cell(40, 9, '')
+        pdf.cell(60, 9, payment.mpesa_receipt, align='R', ln=True)
+
+    pdf.ln(2)
+    # Total
+    pdf.set_fill_color(26, 115, 232)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.cell(130, 10, '  TOTAL PAID', fill=True)
+    pdf.cell(60, 10, f'KSh {payment.amount:,.2f}', fill=True, align='R', ln=True)
+
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(8)
+
+    # Status badge
+    pdf.set_font('Helvetica', 'B', 10)
+    status_color = (16, 185, 129) if payment.status == 'completed' else (245, 158, 11)
+    pdf.set_text_color(*status_color)
+    pdf.cell(0, 8, f'Payment Status: {payment.status.upper()}', ln=True)
+
+    pdf.set_text_color(139, 148, 158)
+    pdf.set_font('Helvetica', '', 9)
+    pdf.ln(6)
+    pdf.cell(0, 6, 'Thank you for your membership. Stay fit, stay healthy!', ln=True, align='C')
+    pdf.cell(0, 6, 'This is a computer-generated invoice and requires no signature.', ln=True, align='C')
+
+    buf = io.BytesIO()
+    pdf_bytes = pdf.output()
+    buf.write(pdf_bytes)
+    buf.seek(0)
+    return buf
+
+# ── AI Workout Suggestion ─────────────────────────────────────────────────────
+def get_ai_workout_suggestion(age, goal, fitness_level='Beginner', medical_notes=''):
+    """Call Anthropic API to get personalized workout suggestions."""
+    if not ANTHROPIC_API_KEY:
+        return None
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        prompt = f"""You are a professional gym trainer in Nairobi, Kenya. Suggest 3 specific workout plans for a member with these details:
+- Age: {age}
+- Fitness Goal: {goal}
+- Fitness Level: {fitness_level}
+- Medical Notes: {medical_notes or 'None'}
+
+Return ONLY a JSON array (no markdown, no extra text) with exactly 3 objects, each having these fields:
+"name" (string), "type" (one of: HIIT/Strength/Cardio/Flexibility/General), "duration" (integer minutes), 
+"difficulty" (Beginner/Intermediate/Advanced), "description" (2-3 sentences), "exercises" (list of 4-5 exercise names)
+
+Example format: [{{"name":"Morning HIIT","type":"HIIT","duration":30,"difficulty":"Beginner","description":"...","exercises":["Jumping Jacks","Burpees"]}}]"""
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = message.content[0].text.strip()
+        # Strip markdown fences if present
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+        return json.loads(raw.strip())
+    except Exception as e:
+        print(f'AI suggestion error: {e}')
+        return None
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES
@@ -178,23 +393,32 @@ def dashboard():
     total_workouts  = Workout.query.filter_by(is_personal=False).count()
     cash_revenue    = db.session.query(db.func.sum(Payment.amount)).filter_by(method='cash').scalar() or 0
     mpesa_revenue   = db.session.query(db.func.sum(Payment.amount)).filter_by(method='mpesa').scalar() or 0
-    card_revenue    = db.session.query(db.func.sum(Payment.amount)).filter_by(method='card').scalar() or 0
-    stripe_revenue  = db.session.query(db.func.sum(Payment.amount)).filter_by(method='stripe').scalar() or 0
-    card_revenue    = card_revenue + stripe_revenue
-    recent_payments = Payment.query.order_by(Payment.payment_date.desc()).limit(5).all()
+    card_revenue    = (db.session.query(db.func.sum(Payment.amount)).filter_by(method='card').scalar() or 0) + \
+                      (db.session.query(db.func.sum(Payment.amount)).filter_by(method='stripe').scalar() or 0)
+    recent_payments   = Payment.query.order_by(Payment.payment_date.desc()).limit(5).all()
     recent_attendance = Attendance.query.order_by(Attendance.check_in.desc()).limit(10).all()
+
+    # Members expiring soon (within 7 days)
+    today = date.today()
+    expiring_soon = Payment.query.filter(
+        Payment.expiry_date >= today,
+        Payment.expiry_date <= today + timedelta(days=7),
+        Payment.status == 'completed'
+    ).all()
+
+    # Age group breakdown
+    youth_count  = Member.query.filter_by(age_group='Youth').count()
+    adult_count  = Member.query.filter_by(age_group='Adult').count()
+    senior_count = Member.query.filter_by(age_group='Senior').count()
+
     return render_template('index.html',
-                           total_members=total_members,
-                           active_members=active_members,
-                           total_trainers=total_trainers,
-                           total_payments=total_payments,
-                           total_classes=total_classes,
-                           total_workouts=total_workouts,
-                           cash_revenue=cash_revenue,
-                           mpesa_revenue=mpesa_revenue,
-                           card_revenue=card_revenue,
-                           recent_payments=recent_payments,
-                           recent_attendance=recent_attendance)
+                           total_members=total_members, active_members=active_members,
+                           total_trainers=total_trainers, total_payments=total_payments,
+                           total_classes=total_classes, total_workouts=total_workouts,
+                           cash_revenue=cash_revenue, mpesa_revenue=mpesa_revenue,
+                           card_revenue=card_revenue, recent_payments=recent_payments,
+                           recent_attendance=recent_attendance, expiring_soon=expiring_soon,
+                           youth_count=youth_count, adult_count=adult_count, senior_count=senior_count)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TRAINER DASHBOARD
@@ -204,10 +428,8 @@ def dashboard():
 @login_required
 @trainer_required
 def trainer_dashboard():
-    from datetime import date
     trainer = Trainer.query.filter_by(user_id=current_user.id).first()
     today   = date.today()
-
     today_classes = []
     my_clients    = []
     if trainer:
@@ -215,7 +437,6 @@ def trainer_dashboard():
             Class.trainer_id == trainer.id,
             db.func.date(Class.schedule) == today
         ).all()
-
         workout_ids = [w.id for w in Workout.query.filter_by(trainer_id=trainer.id).all()]
         if workout_ids:
             my_clients = Member.query.join(MemberWorkout).filter(
@@ -227,13 +448,9 @@ def trainer_dashboard():
     all_members       = Member.query.all()
 
     return render_template('trainer_dashboard.html',
-                           trainer=trainer,
-                           today_classes=today_classes,
-                           my_clients=my_clients,
-                           week_attendance=week_attendance,
-                           recent_attendance=recent_attendance,
-                           all_members=all_members,
-                           today=today)
+                           trainer=trainer, today_classes=today_classes,
+                           my_clients=my_clients, week_attendance=week_attendance,
+                           recent_attendance=recent_attendance, all_members=all_members, today=today)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  MEMBER DASHBOARD
@@ -242,15 +459,14 @@ def trainer_dashboard():
 @app.route('/member-dashboard')
 @login_required
 def member_dashboard():
-    from datetime import date
     member = Member.query.filter_by(user_id=current_user.id).first()
     if not member:
         flash('Member profile not found.', 'danger')
         return redirect(url_for('login'))
 
+    today            = date.today()
     member_workouts  = MemberWorkout.query.filter_by(member_id=member.id).order_by(MemberWorkout.assigned_date.desc()).limit(5).all()
     member_progress  = Progress.query.filter_by(member_id=member.id).order_by(Progress.date.desc()).limit(6).all()
-    today            = date.today()
     upcoming_classes = (ClassBooking.query.filter_by(member_id=member.id)
                         .join(Class).filter(Class.schedule >= datetime.now())
                         .order_by(Class.schedule).limit(5).all())
@@ -262,31 +478,27 @@ def member_dashboard():
     ).count()
     available_classes = Class.query.filter(Class.schedule >= datetime.now()).order_by(Class.schedule).limit(10).all()
     all_trainers      = Trainer.query.all()
+    recent_logs       = WorkoutLog.query.filter_by(member_id=member.id).order_by(WorkoutLog.completed_at.desc()).limit(5).all()
+    latest_measurements = BodyMeasurement.query.filter_by(member_id=member.id).order_by(BodyMeasurement.date.desc()).first()
 
     return render_template('member_dashboard.html',
-                           member=member,
-                           member_workouts=member_workouts,
-                           member_progress=member_progress,
-                           upcoming_classes=upcoming_classes,
-                           nutrition_plan=nutrition_plan,
-                           recent_payments=recent_payments,
-                           latest_payment=latest_payment,
-                           month_attendance=month_attendance,
-                           available_classes=available_classes,
-                           all_trainers=all_trainers,
-                           today=today)
+                           member=member, member_workouts=member_workouts,
+                           member_progress=member_progress, upcoming_classes=upcoming_classes,
+                           nutrition_plan=nutrition_plan, recent_payments=recent_payments,
+                           latest_payment=latest_payment, month_attendance=month_attendance,
+                           available_classes=available_classes, all_trainers=all_trainers,
+                           today=today, recent_logs=recent_logs,
+                           latest_measurements=latest_measurements)
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  MEMBERS  (Admin only)
+#  MEMBERS (Admin)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/members')
 @login_required
 @admin_required
 def members():
-    return render_template('members.html',
-                           members=Member.query.all(),
-                           plans=MembershipPlan.query.all())
+    return render_template('members.html', members=Member.query.all(), plans=MembershipPlan.query.all())
 
 @app.route('/members/add', methods=['POST'])
 @login_required
@@ -297,17 +509,32 @@ def add_member():
     phone    = request.form.get('phone')
     plan_id  = request.form.get('plan_id')
     goal     = request.form.get('goal')
-    status   = request.form.get('status')
+    status   = request.form.get('status', 'active')
     password = request.form.get('password')
+    dob_str  = request.form.get('date_of_birth')
+    age_group = request.form.get('age_group', 'Adult')
+    emergency_name  = request.form.get('emergency_contact_name')
+    emergency_phone = request.form.get('emergency_contact_phone')
+    mpesa_phone     = request.form.get('mpesa_phone')
+    medical_notes   = request.form.get('medical_notes')
+
     if User.query.filter_by(email=email).first():
         flash('A user with this email already exists.', 'danger')
         return redirect(url_for('members'))
+
     hashed   = bcrypt.generate_password_hash(password).decode('utf-8')
     new_user = User(username=name, email=email, password_hash=hashed, role='member')
     db.session.add(new_user)
     db.session.flush()
-    db.session.add(Member(user_id=new_user.id, name=name, email=email, phone=phone,
-                          plan_id=int(plan_id) if plan_id else None, goal=goal, status=status))
+
+    dob = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
+    db.session.add(Member(
+        user_id=new_user.id, name=name, email=email, phone=phone,
+        plan_id=int(plan_id) if plan_id else None, goal=goal, status=status,
+        date_of_birth=dob, age_group=age_group,
+        emergency_contact_name=emergency_name, emergency_contact_phone=emergency_phone,
+        mpesa_phone=mpesa_phone, medical_notes=medical_notes
+    ))
     db.session.commit()
     flash(f'Member {name} added!', 'success')
     return redirect(url_for('members'))
@@ -321,10 +548,17 @@ def edit_member(id):
         member.name    = request.form.get('name')
         member.email   = request.form.get('email')
         member.phone   = request.form.get('phone')
-        plan_id        = request.form.get('plan_id')
-        member.plan_id = int(plan_id) if plan_id else None
+        pid = request.form.get('plan_id')
+        member.plan_id = int(pid) if pid else None
         member.goal    = request.form.get('goal')
         member.status  = request.form.get('status')
+        member.age_group = request.form.get('age_group', 'Adult')
+        dob_str = request.form.get('date_of_birth')
+        member.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
+        member.emergency_contact_name  = request.form.get('emergency_contact_name')
+        member.emergency_contact_phone = request.form.get('emergency_contact_phone')
+        member.mpesa_phone    = request.form.get('mpesa_phone')
+        member.medical_notes  = request.form.get('medical_notes')
         db.session.commit()
         flash('Member updated!', 'success')
         return redirect(url_for('members'))
@@ -344,7 +578,7 @@ def delete_member(id):
     return redirect(url_for('members'))
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  TRAINERS  (Admin only)
+#  TRAINERS (Admin)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/trainers')
@@ -357,19 +591,15 @@ def trainers():
 @login_required
 @admin_required
 def add_trainer():
-    name           = request.form.get('name')
-    email          = request.form.get('email')
-    phone          = request.form.get('phone')
-    specialization = request.form.get('specialization')
-    bio            = request.form.get('bio')
-    password       = request.form.get('password')
+    name = request.form.get('name'); email = request.form.get('email')
+    phone = request.form.get('phone'); specialization = request.form.get('specialization')
+    bio = request.form.get('bio'); password = request.form.get('password')
     if User.query.filter_by(email=email).first():
         flash('A user with this email already exists.', 'danger')
         return redirect(url_for('trainers'))
-    hashed      = bcrypt.generate_password_hash(password).decode('utf-8')
-    new_user    = User(username=name, email=email, password_hash=hashed, role='trainer')
-    db.session.add(new_user)
-    db.session.flush()
+    hashed   = bcrypt.generate_password_hash(password).decode('utf-8')
+    new_user = User(username=name, email=email, password_hash=hashed, role='trainer')
+    db.session.add(new_user); db.session.flush()
     db.session.add(Trainer(user_id=new_user.id, name=name, email=email, phone=phone,
                            specialization=specialization, bio=bio))
     db.session.commit()
@@ -382,13 +612,10 @@ def add_trainer():
 def edit_trainer(id):
     trainer = Trainer.query.get_or_404(id)
     if request.method == 'POST':
-        trainer.name           = request.form.get('name')
-        trainer.email          = request.form.get('email')
-        trainer.phone          = request.form.get('phone')
-        trainer.specialization = request.form.get('specialization')
-        trainer.bio            = request.form.get('bio')
-        db.session.commit()
-        flash('Trainer updated!', 'success')
+        trainer.name = request.form.get('name'); trainer.email = request.form.get('email')
+        trainer.phone = request.form.get('phone')
+        trainer.specialization = request.form.get('specialization'); trainer.bio = request.form.get('bio')
+        db.session.commit(); flash('Trainer updated!', 'success')
         return redirect(url_for('trainers'))
     return render_template('edit_trainer.html', trainer=trainer)
 
@@ -397,25 +624,42 @@ def edit_trainer(id):
 @admin_required
 def delete_trainer(id):
     trainer = Trainer.query.get_or_404(id)
-    user    = User.query.get(trainer.user_id)
+    user = User.query.get(trainer.user_id)
     db.session.delete(trainer)
-    if user:
-        db.session.delete(user)
-    db.session.commit()
-    flash('Trainer deleted.', 'success')
+    if user: db.session.delete(user)
+    db.session.commit(); flash('Trainer deleted.', 'success')
     return redirect(url_for('trainers'))
 
-# Member view of trainers (read-only profiles)
 @app.route('/trainer-profiles')
 @login_required
 def trainer_profiles():
-    all_trainers = Trainer.query.all()
-    return render_template('trainer_profiles.html', trainers=all_trainers)
+    trainers = Trainer.query.all()
+    # Get member for rating check
+    member = None
+    if current_user.role == 'member':
+        member = Member.query.filter_by(user_id=current_user.id).first()
+    return render_template('trainer_profiles.html', trainers=trainers, member=member)
+
+# Trainer rating by member
+@app.route('/trainers/rate/<int:trainer_id>', methods=['POST'])
+@login_required
+@member_required
+def rate_trainer(trainer_id):
+    member  = Member.query.filter_by(user_id=current_user.id).first()
+    rating  = int(request.form.get('rating', 5))
+    review  = request.form.get('review', '')
+    existing = TrainerRating.query.filter_by(trainer_id=trainer_id, member_id=member.id).first()
+    if existing:
+        existing.rating = rating; existing.review = review
+        flash('Rating updated!', 'success')
+    else:
+        db.session.add(TrainerRating(trainer_id=trainer_id, member_id=member.id, rating=rating, review=review))
+        flash('Trainer rated! Thank you.', 'success')
+    db.session.commit()
+    return redirect(url_for('trainer_profiles'))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  WORKOUTS
-#  - Admin/Trainer: full CRUD, assign to members, comment on member workouts
-#  - Member: add personal workouts, view only their own, delete their own
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/workouts')
@@ -423,131 +667,96 @@ def trainer_profiles():
 @trainer_required
 def workouts():
     all_workouts = Workout.query.filter_by(is_personal=False).all()
-    all_trainers = Trainer.query.all()
-    all_members  = Member.query.all()
-    return render_template('workouts.html',
-                           workouts=all_workouts,
-                           trainers=all_trainers,
-                           members=all_members)
+    return render_template('workouts.html', workouts=all_workouts,
+                           trainers=Trainer.query.all(), members=Member.query.all())
 
 @app.route('/workouts/add', methods=['POST'])
 @login_required
 @trainer_required
 def add_workout():
-    trainer_id = request.form.get('trainer_id')
-    new_workout = Workout(
-        name        = request.form.get('name'),
-        type        = request.form.get('type'),
-        duration    = int(request.form.get('duration', 0)),
-        difficulty  = request.form.get('difficulty'),
-        trainer_id  = int(trainer_id) if trainer_id else None,
-        description = request.form.get('description'),
-        is_personal = False
-    )
-    db.session.add(new_workout)
-    db.session.commit()
-    flash('Workout added!', 'success')
+    tid = request.form.get('trainer_id')
+    db.session.add(Workout(
+        name=request.form.get('name'), type=request.form.get('type'),
+        duration=int(request.form.get('duration', 0)), difficulty=request.form.get('difficulty'),
+        trainer_id=int(tid) if tid else None, description=request.form.get('description'),
+        is_personal=False
+    ))
+    db.session.commit(); flash('Workout added!', 'success')
     return redirect(url_for('workouts'))
 
 @app.route('/workouts/assign', methods=['POST'])
 @login_required
 @trainer_required
 def assign_workout():
-    member_id  = request.form.get('member_id')
-    workout_id = request.form.get('workout_id')
-    existing   = MemberWorkout.query.filter_by(member_id=int(member_id), workout_id=int(workout_id)).first()
-    if existing:
-        flash('Workout already assigned to this member.', 'warning')
+    mid = int(request.form.get('member_id')); wid = int(request.form.get('workout_id'))
+    if MemberWorkout.query.filter_by(member_id=mid, workout_id=wid).first():
+        flash('Already assigned.', 'warning')
     else:
-        db.session.add(MemberWorkout(member_id=int(member_id), workout_id=int(workout_id)))
-        db.session.commit()
-        flash('Workout assigned to member!', 'success')
+        db.session.add(MemberWorkout(member_id=mid, workout_id=wid)); db.session.commit()
+        flash('Workout assigned!', 'success')
     return redirect(url_for('workouts'))
 
 @app.route('/workouts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 @trainer_required
 def edit_workout(id):
-    workout      = Workout.query.get_or_404(id)
-    all_trainers = Trainer.query.all()
+    workout = Workout.query.get_or_404(id)
     if request.method == 'POST':
-        workout.name        = request.form.get('name')
-        workout.type        = request.form.get('type')
-        workout.duration    = int(request.form.get('duration'))
-        workout.difficulty  = request.form.get('difficulty')
-        tid                 = request.form.get('trainer_id')
-        workout.trainer_id  = int(tid) if tid else None
+        workout.name = request.form.get('name'); workout.type = request.form.get('type')
+        workout.duration = int(request.form.get('duration')); workout.difficulty = request.form.get('difficulty')
+        tid = request.form.get('trainer_id'); workout.trainer_id = int(tid) if tid else None
         workout.description = request.form.get('description')
-        db.session.commit()
-        flash('Workout updated!', 'success')
+        db.session.commit(); flash('Workout updated!', 'success')
         return redirect(url_for('workouts'))
-    return render_template('edit_workout.html', workout=workout, trainers=all_trainers)
+    return render_template('edit_workout.html', workout=workout, trainers=Trainer.query.all())
 
 @app.route('/workouts/delete/<int:id>')
 @login_required
 @trainer_required
 def delete_workout(id):
-    workout = Workout.query.get_or_404(id)
-    db.session.delete(workout)
-    db.session.commit()
-    flash('Workout deleted.', 'success')
-    return redirect(url_for('workouts'))
+    db.session.delete(Workout.query.get_or_404(id)); db.session.commit()
+    flash('Workout deleted.', 'success'); return redirect(url_for('workouts'))
 
-# Trainer comments on workouts
 @app.route('/workouts/<int:workout_id>/comment', methods=['POST'])
 @login_required
 @trainer_required
 def comment_workout(workout_id):
-    workout = Workout.query.get_or_404(workout_id)
+    Workout.query.get_or_404(workout_id)
     trainer = Trainer.query.filter_by(user_id=current_user.id).first()
-    if not trainer:
-        flash('Trainer profile not found.', 'danger')
-        return redirect(url_for('workouts'))
-    comment_text = request.form.get('comment', '').strip()
-    if comment_text:
-        db.session.add(WorkoutComment(workout_id=workout_id, trainer_id=trainer.id, comment=comment_text))
-        db.session.commit()
-        flash('Comment added!', 'success')
+    text = request.form.get('comment', '').strip()
+    if trainer and text:
+        db.session.add(WorkoutComment(workout_id=workout_id, trainer_id=trainer.id, comment=text))
+        db.session.commit(); flash('Comment added!', 'success')
     return redirect(url_for('workouts'))
 
-# ─── Member workout routes ────────────────────────────────────────────────────
+# ─── Member workouts ──────────────────────────────────────────────────────────
 
 @app.route('/my-workouts')
 @login_required
 @member_required
 def my_workouts():
     member = Member.query.filter_by(user_id=current_user.id).first()
-    if not member:
-        flash('Member profile not found.', 'danger')
-        return redirect(url_for('member_dashboard'))
-    # Both personal workouts AND assigned workouts
-    personal_workouts  = Workout.query.filter_by(member_id=member.id, is_personal=True).all()
-    assigned_workouts  = MemberWorkout.query.filter_by(member_id=member.id).all()
-    return render_template('my_workout.html',
-                           member=member,
+    personal_workouts = Workout.query.filter_by(member_id=member.id, is_personal=True).all()
+    assigned_workouts = MemberWorkout.query.filter_by(member_id=member.id).all()
+    workout_logs      = WorkoutLog.query.filter_by(member_id=member.id).order_by(WorkoutLog.completed_at.desc()).limit(10).all()
+    all_workouts      = [mw.workout for mw in assigned_workouts] + personal_workouts
+    return render_template('my_workouts.html', member=member,
                            personal_workouts=personal_workouts,
-                           assigned_workouts=assigned_workouts)
+                           assigned_workouts=assigned_workouts,
+                           workout_logs=workout_logs,
+                           all_workouts=all_workouts)
 
 @app.route('/my-workouts/add', methods=['POST'])
 @login_required
 @member_required
 def add_my_workout():
     member = Member.query.filter_by(user_id=current_user.id).first()
-    if not member:
-        flash('Member profile not found.', 'danger')
-        return redirect(url_for('member_dashboard'))
-    new_workout = Workout(
-        name        = request.form.get('name'),
-        type        = request.form.get('type'),
-        duration    = int(request.form.get('duration', 0)),
-        difficulty  = request.form.get('difficulty'),
-        description = request.form.get('description'),
-        member_id   = member.id,
-        is_personal = True
-    )
-    db.session.add(new_workout)
-    db.session.commit()
-    flash('Workout added!', 'success')
+    db.session.add(Workout(
+        name=request.form.get('name'), type=request.form.get('type'),
+        duration=int(request.form.get('duration', 0)), difficulty=request.form.get('difficulty'),
+        description=request.form.get('description'), member_id=member.id, is_personal=True
+    ))
+    db.session.commit(); flash('Workout added!', 'success')
     return redirect(url_for('my_workouts'))
 
 @app.route('/my-workouts/delete/<int:id>')
@@ -559,192 +768,188 @@ def delete_my_workout(id):
     if workout.member_id != member.id or not workout.is_personal:
         flash('You can only delete your own workouts.', 'danger')
         return redirect(url_for('my_workouts'))
-    db.session.delete(workout)
-    db.session.commit()
-    flash('Workout deleted.', 'success')
+    db.session.delete(workout); db.session.commit()
+    flash('Workout deleted.', 'success'); return redirect(url_for('my_workouts'))
+
+@app.route('/my-workouts/log', methods=['POST'])
+@login_required
+@member_required
+def log_workout():
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    wid    = request.form.get('workout_id')
+    workout = Workout.query.get(int(wid)) if wid else None
+    db.session.add(WorkoutLog(
+        member_id=member.id,
+        workout_id=int(wid) if wid else None,
+        workout_name=workout.name if workout else request.form.get('workout_name', 'Custom'),
+        notes=request.form.get('notes'),
+        duration_mins=int(request.form.get('duration_mins', 0)),
+        calories_burned=int(request.form.get('calories_burned', 0))
+    ))
+    db.session.commit(); flash('Workout logged!', 'success')
+    return redirect(url_for('my_workouts'))
+
+# AI workout suggestion endpoint
+@app.route('/my-workouts/ai-suggest')
+@login_required
+@member_required
+def ai_suggest_workouts():
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    age    = member.age or 25
+    goal   = member.goal or 'General Fitness'
+    suggestions = get_ai_workout_suggestion(age, goal, medical_notes=member.medical_notes or '')
+    if not suggestions:
+        flash('AI suggestions unavailable right now. Please try again later.', 'warning')
+        return redirect(url_for('my_workouts'))
+    return render_template('ai_workouts.html', member=member, suggestions=suggestions)
+
+@app.route('/my-workouts/ai-save', methods=['POST'])
+@login_required
+@member_required
+def save_ai_workout():
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    db.session.add(Workout(
+        name=request.form.get('name'), type=request.form.get('type'),
+        duration=int(request.form.get('duration', 30)),
+        difficulty=request.form.get('difficulty', 'Beginner'),
+        description=request.form.get('description'),
+        member_id=member.id, is_personal=True, is_ai_suggested=True,
+        target_age_group=member.age_group, target_goal=member.goal
+    ))
+    db.session.commit(); flash('AI workout saved to your plans!', 'success')
     return redirect(url_for('my_workouts'))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  NUTRITION
-#  - Admin/Trainer: full CRUD + comment on plans
-#  - Member: view own plans only
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/nutrition')
 @login_required
 @trainer_required
 def nutrition():
-    all_nutrition = Nutrition.query.all()
-    all_members   = Member.query.all()
-    return render_template('nutrition.html', nutrition=all_nutrition, members=all_members)
+    return render_template('nutrition.html', nutrition=Nutrition.query.all(), members=Member.query.all())
 
 @app.route('/nutrition/add', methods=['POST'])
 @login_required
 @trainer_required
 def add_nutrition():
     db.session.add(Nutrition(
-        member_id = int(request.form.get('member_id')),
-        meal_plan = request.form.get('meal_plan'),
-        calories  = int(request.form.get('calories')),
-        protein   = int(request.form.get('protein')),
-        schedule  = request.form.get('schedule')
-    ))
-    db.session.commit()
-    flash('Meal plan added!', 'success')
+        member_id=int(request.form.get('member_id')), meal_plan=request.form.get('meal_plan'),
+        calories=int(request.form.get('calories')), protein=int(request.form.get('protein')),
+        schedule=request.form.get('schedule')
+    )); db.session.commit(); flash('Meal plan added!', 'success')
     return redirect(url_for('nutrition'))
 
 @app.route('/nutrition/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 @trainer_required
 def edit_nutrition(id):
-    plan        = Nutrition.query.get_or_404(id)
-    all_members = Member.query.all()
+    plan = Nutrition.query.get_or_404(id)
     if request.method == 'POST':
-        plan.member_id = int(request.form.get('member_id'))
-        plan.meal_plan = request.form.get('meal_plan')
-        plan.calories  = int(request.form.get('calories'))
-        plan.protein   = int(request.form.get('protein'))
-        plan.schedule  = request.form.get('schedule')
-        db.session.commit()
-        flash('Meal plan updated!', 'success')
+        plan.member_id=int(request.form.get('member_id')); plan.meal_plan=request.form.get('meal_plan')
+        plan.calories=int(request.form.get('calories')); plan.protein=int(request.form.get('protein'))
+        plan.schedule=request.form.get('schedule'); db.session.commit(); flash('Updated!', 'success')
         return redirect(url_for('nutrition'))
-    return render_template('edit_nutrition.html', plan=plan, members=all_members)
+    return render_template('edit_nutrition.html', plan=plan, members=Member.query.all())
 
 @app.route('/nutrition/delete/<int:id>')
 @login_required
 @trainer_required
 def delete_nutrition(id):
-    plan = Nutrition.query.get_or_404(id)
-    db.session.delete(plan)
-    db.session.commit()
-    flash('Meal plan deleted.', 'success')
-    return redirect(url_for('nutrition'))
+    db.session.delete(Nutrition.query.get_or_404(id)); db.session.commit()
+    flash('Deleted.', 'success'); return redirect(url_for('nutrition'))
 
-# Trainer comment on nutrition
 @app.route('/nutrition/<int:nutrition_id>/comment', methods=['POST'])
 @login_required
 @trainer_required
 def comment_nutrition(nutrition_id):
     Nutrition.query.get_or_404(nutrition_id)
-    trainer      = Trainer.query.filter_by(user_id=current_user.id).first()
-    comment_text = request.form.get('comment', '').strip()
-    if trainer and comment_text:
-        db.session.add(NutritionComment(nutrition_id=nutrition_id, trainer_id=trainer.id, comment=comment_text))
-        db.session.commit()
-        flash('Comment added!', 'success')
+    trainer = Trainer.query.filter_by(user_id=current_user.id).first()
+    text = request.form.get('comment', '').strip()
+    if trainer and text:
+        db.session.add(NutritionComment(nutrition_id=nutrition_id, trainer_id=trainer.id, comment=text))
+        db.session.commit(); flash('Comment added!', 'success')
     return redirect(url_for('nutrition'))
 
-# Member view own nutrition
 @app.route('/my-nutrition')
 @login_required
 @member_required
 def my_nutrition():
     member = Member.query.filter_by(user_id=current_user.id).first()
-    if not member:
-        flash('Member profile not found.', 'danger')
-        return redirect(url_for('member_dashboard'))
-    plans = Nutrition.query.filter_by(member_id=member.id).order_by(Nutrition.date.desc()).all()
+    plans  = Nutrition.query.filter_by(member_id=member.id).order_by(Nutrition.date.desc()).all()
     return render_template('my_nutrition.html', member=member, plans=plans)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ATTENDANCE
-#  - Admin/Trainer: full CRUD (check-in, check-out, delete)
-#  - Member: view own attendance only
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/attendance')
 @login_required
 @trainer_required
 def attendance():
-    from datetime import date
-    all_attendance   = Attendance.query.order_by(Attendance.check_in.desc()).all()
-    all_members      = Member.query.all()
-    today            = date.today()
-    today_count      = Attendance.query.filter_by(date=today).count()
-    checked_in_count = Attendance.query.filter_by(date=today, check_out=None).count()
-    total_count      = Attendance.query.count()
+    today = date.today()
     return render_template('attendance.html',
-                           attendance=all_attendance,
-                           members=all_members,
-                           today_count=today_count,
-                           checked_in_count=checked_in_count,
-                           total_count=total_count)
+                           attendance=Attendance.query.order_by(Attendance.check_in.desc()).all(),
+                           members=Member.query.all(),
+                           today_count=Attendance.query.filter_by(date=today).count(),
+                           checked_in_count=Attendance.query.filter_by(date=today, check_out=None).count(),
+                           total_count=Attendance.query.count())
 
 @app.route('/attendance/checkin', methods=['POST'])
 @login_required
 @trainer_required
 def check_in():
-    from datetime import date
-    member_id = int(request.form.get('member_id'))
-    today     = date.today()
-    existing  = Attendance.query.filter_by(member_id=member_id, date=today, check_out=None).first()
-    if existing:
-        flash('Member already checked in today!', 'warning')
+    mid   = int(request.form.get('member_id')); today = date.today()
+    if Attendance.query.filter_by(member_id=mid, date=today, check_out=None).first():
+        flash('Already checked in today!', 'warning')
     else:
-        db.session.add(Attendance(member_id=member_id, check_in=datetime.now(), date=today))
-        db.session.commit()
-        flash('Member checked in!', 'success')
+        db.session.add(Attendance(member_id=mid, check_in=datetime.now(), date=today))
+        db.session.commit(); flash('Member checked in!', 'success')
     return redirect(url_for('attendance'))
 
 @app.route('/attendance/checkout/<int:id>')
 @login_required
 @trainer_required
 def check_out(id):
-    record           = Attendance.query.get_or_404(id)
-    record.check_out = datetime.now()
-    db.session.commit()
-    flash('Member checked out!', 'success')
-    return redirect(url_for('attendance'))
+    record = Attendance.query.get_or_404(id)
+    record.check_out = datetime.now(); db.session.commit()
+    flash('Checked out!', 'success'); return redirect(url_for('attendance'))
 
 @app.route('/attendance/delete/<int:id>')
 @login_required
 @trainer_required
 def delete_attendance(id):
-    record = Attendance.query.get_or_404(id)
-    db.session.delete(record)
-    db.session.commit()
-    flash('Attendance record deleted.', 'success')
-    return redirect(url_for('attendance'))
+    db.session.delete(Attendance.query.get_or_404(id)); db.session.commit()
+    flash('Record deleted.', 'success'); return redirect(url_for('attendance'))
 
-# Member view own attendance
 @app.route('/my-attendance')
 @login_required
 @member_required
 def my_attendance():
-    member = Member.query.filter_by(user_id=current_user.id).first()
-    if not member:
-        flash('Member profile not found.', 'danger')
-        return redirect(url_for('member_dashboard'))
+    member  = Member.query.filter_by(user_id=current_user.id).first()
     records = Attendance.query.filter_by(member_id=member.id).order_by(Attendance.check_in.desc()).all()
-    total   = len(records)
-    return render_template('my_attendance.html', member=member, records=records, total=total)
+    return render_template('my_attendance.html', member=member, records=records, total=len(records))
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PAYMENTS
-#  - Admin: full access / record payments
-#  - Member: view own payments + Stripe checkout
-#  - Trainer: NO access
+#  PAYMENTS — ADMIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/payments')
 @login_required
 @admin_required
 def payments():
-    from datetime import date
     from calendar import monthrange
-    all_payments   = Payment.query.order_by(Payment.payment_date.desc()).all()
-    all_members    = Member.query.all()
-    total_revenue  = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
-    total_payments = Payment.query.count()
-    today          = date.today()
-    month_end      = date(today.year, today.month, monthrange(today.year, today.month)[1])
-    expiring_count = Payment.query.filter(Payment.expiry_date <= month_end, Payment.expiry_date >= today).count()
+    all_payments  = Payment.query.order_by(Payment.payment_date.desc()).all()
+    today         = date.today()
+    month_end     = date(today.year, today.month, monthrange(today.year, today.month)[1])
+    expiring_count = Payment.query.filter(
+        Payment.expiry_date <= month_end, Payment.expiry_date >= today
+    ).count()
     return render_template('payments.html',
-                           payments=all_payments,
-                           members=all_members,
+                           payments=all_payments, members=Member.query.all(),
                            plans=MembershipPlan.query.all(),
-                           total_revenue=total_revenue,
-                           total_payments=total_payments,
+                           total_revenue=db.session.query(db.func.sum(Payment.amount)).scalar() or 0,
+                           total_payments=Payment.query.count(),
                            expiring_count=expiring_count)
 
 @app.route('/payment/add', methods=['POST'])
@@ -752,42 +957,46 @@ def payments():
 @admin_required
 def add_payment():
     expiry = request.form.get('expiry_date')
+    plan_id = request.form.get('plan_id')
+    member_id = int(request.form.get('member_id'))
+    inv_no = f'INV-{datetime.now().strftime("%Y%m%d%H%M%S")}'
     db.session.add(Payment(
-        member_id   = int(request.form.get('member_id')),
-        amount      = float(request.form.get('amount')),
-        method      = request.form.get('method'),
-        expiry_date = datetime.strptime(expiry, '%Y-%m-%d').date(),
-        status      = 'completed'
+        member_id=member_id, amount=float(request.form.get('amount')),
+        method=request.form.get('method'),
+        expiry_date=datetime.strptime(expiry, '%Y-%m-%d').date() if expiry else None,
+        plan_id=int(plan_id) if plan_id else None,
+        invoice_number=inv_no, status='completed'
     ))
-    db.session.commit()
-    flash('Payment recorded!', 'success')
+    db.session.commit(); flash('Payment recorded!', 'success')
     return redirect(url_for('payments'))
 
 @app.route('/payments/delete/<int:id>')
 @login_required
 @admin_required
 def delete_payment(id):
-    payment = Payment.query.get_or_404(id)
-    db.session.delete(payment)
-    db.session.commit()
-    flash('Payment deleted.', 'success')
-    return redirect(url_for('payments'))
+    db.session.delete(Payment.query.get_or_404(id)); db.session.commit()
+    flash('Payment deleted.', 'success'); return redirect(url_for('payments'))
 
-# Member: view own payments
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PAYMENTS — MEMBER: M-PESA + STRIPE
+# ═══════════════════════════════════════════════════════════════════════════════
+
 @app.route('/my-payments')
 @login_required
 @member_required
 def my_payments():
     member = Member.query.filter_by(user_id=current_user.id).first()
-    if not member:
-        flash('Member profile not found.', 'danger')
-        return redirect(url_for('member_dashboard'))
-    my_pay   = Payment.query.filter_by(member_id=member.id).order_by(Payment.payment_date.desc()).all()
-    plans    = MembershipPlan.query.all()
-    latest   = Payment.query.filter_by(member_id=member.id).order_by(Payment.expiry_date.desc()).first()
-    return render_template('my_payments.html', member=member, payments=my_pay, plans=plans, latest_payment=latest)
+    my_pay  = Payment.query.filter_by(member_id=member.id).order_by(Payment.payment_date.desc()).all()
+    plans   = MembershipPlan.query.all()
+    latest  = Payment.query.filter_by(member_id=member.id).order_by(Payment.expiry_date.desc()).first()
+    today   = date.today()
+    pending_mpesa = MpesaTransaction.query.filter_by(member_id=member.id, status='pending').order_by(MpesaTransaction.created_at.desc()).first()
+    return render_template('my_payments.html', member=member, payments=my_pay,
+                           plans=plans, latest_payment=latest, today=today,
+                           pending_mpesa=pending_mpesa,
+                           stripe_public_key=app.config.get('STRIPE_PUBLIC_KEY', ''))
 
-# Stripe: member checkout
+# ── Stripe Checkout ───────────────────────────────────────────────────────────
 @app.route('/payment/stripe/<int:plan_id>', methods=['POST'])
 @login_required
 def stripe_payment(plan_id):
@@ -801,16 +1010,20 @@ def stripe_payment(plan_id):
             payment_method_types=['card'],
             line_items=[{
                 'price_data': {
-                    'currency': 'usd',
-                    'product_data': {'name': f'{plan.name} Membership'},
+                    'currency': 'kes',
+                    'product_data': {
+                        'name': f'{plan.name} Membership — {member.name}',
+                        'description': f'Gym membership for {member.name} (ID #{member.id})'
+                    },
                     'unit_amount': int(plan.price * 100),
                 },
                 'quantity': 1,
             }],
             mode='payment',
+            customer_email=member.email,
             success_url=url_for('payment_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
             cancel_url=url_for('my_payments', _external=True),
-            metadata={'plan_id': str(plan_id), 'member_id': str(member.id)}
+            metadata={'plan_id': str(plan_id), 'member_id': str(member.id), 'member_name': member.name}
         )
         return redirect(session.url)
     except Exception as e:
@@ -825,171 +1038,249 @@ def payment_success():
 
 @app.route('/webhook/stripe', methods=['POST'])
 def stripe_webhook():
-    payload         = request.get_data(as_text=True)
-    sig_header      = request.headers.get('stripe-signature')
-    endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
-    if not endpoint_secret:
-        return 'Webhook secret not configured', 400
+    payload    = request.get_data(as_text=True)
+    sig_header = request.headers.get('stripe-signature')
+    secret     = os.getenv('STRIPE_WEBHOOK_SECRET')
+    if not secret:
+        return 'No webhook secret', 400
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except (ValueError, stripe.error.SignatureVerificationError):
+        event = stripe.Webhook.construct_event(payload, sig_header, secret)
+    except Exception:
         return 'Invalid', 400
     if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
+        s = event['data']['object']
         try:
-            member_id = int(session['metadata']['member_id'])
-            plan_id   = int(session['metadata']['plan_id'])
+            member_id = int(s['metadata']['member_id'])
+            plan_id   = int(s['metadata']['plan_id'])
             member    = Member.query.get(member_id)
             plan      = MembershipPlan.query.get(plan_id)
             if member and plan:
                 expiry = datetime.utcnow().date() + timedelta(days=plan.duration_days)
-                db.session.add(Payment(member_id=member_id, amount=plan.price, method='stripe',
-                                       expiry_date=expiry, transaction_id=session.get('id'),
-                                       status='completed', external_status='completed'))
-                member.plan_id = plan_id
-                member.status  = 'active'
+                inv_no = f'INV-STRIPE-{s.get("id","")[-8:]}'
+                db.session.add(Payment(
+                    member_id=member_id, amount=plan.price, method='stripe',
+                    expiry_date=expiry, transaction_id=s.get('id'),
+                    plan_id=plan_id, invoice_number=inv_no,
+                    status='completed', external_status='completed'
+                ))
+                member.plan_id = plan_id; member.status = 'active'
                 db.session.commit()
         except Exception as e:
-            print(f'Webhook error: {e}')
+            print(f'Stripe webhook error: {e}')
     return '', 200
+
+# ── M-Pesa STK Push ───────────────────────────────────────────────────────────
+@app.route('/payment/mpesa/<int:plan_id>', methods=['POST'])
+@login_required
+@member_required
+def mpesa_payment(plan_id):
+    plan   = MembershipPlan.query.get_or_404(plan_id)
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    phone  = request.form.get('phone') or member.mpesa_phone or member.phone
+    if not phone:
+        flash('Please provide your M-Pesa phone number.', 'danger')
+        return redirect(url_for('my_payments'))
+
+    account_ref = f'GYM{member.id:04d}'
+    desc        = f'{plan.name} Membership - {member.name}'
+
+    checkout_id, merchant_id = stk_push(phone, int(plan.price), account_ref, desc)
+    if not checkout_id:
+        flash(f'M-Pesa request failed: {merchant_id}', 'danger')
+        return redirect(url_for('my_payments'))
+
+    # Save pending transaction
+    db.session.add(MpesaTransaction(
+        member_id=member.id, plan_id=plan_id, phone_number=phone,
+        amount=plan.price, checkout_request_id=checkout_id,
+        merchant_request_id=merchant_id, status='pending'
+    ))
+    # Update member's mpesa_phone if not set
+    if not member.mpesa_phone:
+        member.mpesa_phone = phone
+    db.session.commit()
+
+    flash(f'M-Pesa STK Push sent to {phone}. Enter your PIN on your phone to complete payment.', 'success')
+    return redirect(url_for('my_payments'))
+
+@app.route('/webhook/mpesa', methods=['POST'])
+def mpesa_webhook():
+    """Daraja callback URL for STK Push result."""
+    try:
+        data = request.get_json(force=True)
+        result = data.get('Body', {}).get('stkCallback', {})
+        checkout_id = result.get('CheckoutRequestID')
+        result_code = result.get('ResultCode')
+
+        txn = MpesaTransaction.query.filter_by(checkout_request_id=checkout_id).first()
+        if not txn:
+            return jsonify({'ResultCode': 0}), 200
+
+        if result_code == 0:
+            # Success — extract receipt
+            items = result.get('CallbackMetadata', {}).get('Item', [])
+            receipt = next((i['Value'] for i in items if i['Name'] == 'MpesaReceiptNumber'), None)
+            amount  = next((i['Value'] for i in items if i['Name'] == 'Amount'), txn.amount)
+
+            txn.status = 'completed'; txn.mpesa_receipt = receipt
+            plan   = MembershipPlan.query.get(txn.plan_id)
+            member = Member.query.get(txn.member_id)
+            if plan and member:
+                expiry = datetime.utcnow().date() + timedelta(days=plan.duration_days)
+                inv_no = f'INV-MPESA-{receipt or checkout_id[-8:]}'
+                db.session.add(Payment(
+                    member_id=member.id, amount=amount, method='mpesa',
+                    expiry_date=expiry, transaction_id=checkout_id,
+                    mpesa_receipt=receipt, plan_id=txn.plan_id,
+                    invoice_number=inv_no, status='completed', external_status='completed'
+                ))
+                member.plan_id = txn.plan_id; member.status = 'active'
+        else:
+            txn.status = 'failed'
+
+        db.session.commit()
+    except Exception as e:
+        print(f'M-Pesa webhook error: {e}')
+    return jsonify({'ResultCode': 0, 'ResultDesc': 'Accepted'}), 200
+
+# M-Pesa status check (AJAX polling)
+@app.route('/payment/mpesa/status/<checkout_id>')
+@login_required
+def mpesa_status(checkout_id):
+    txn = MpesaTransaction.query.filter_by(checkout_request_id=checkout_id).first()
+    if not txn:
+        return jsonify({'status': 'not_found'})
+    return jsonify({'status': txn.status, 'receipt': txn.mpesa_receipt})
+
+# ── Invoice Download ──────────────────────────────────────────────────────────
+@app.route('/payment/invoice/<int:payment_id>')
+@login_required
+def download_invoice(payment_id):
+    payment = Payment.query.get_or_404(payment_id)
+    # Only admin or the paying member can download
+    if current_user.role == 'member':
+        member = Member.query.filter_by(user_id=current_user.id).first()
+        if not member or payment.member_id != member.id:
+            abort(403)
+    member  = Member.query.get(payment.member_id)
+    buf     = generate_invoice_pdf(payment, member)
+    inv_no  = payment.invoice_number or f'INV-{payment.id:05d}'
+    return send_file(buf, mimetype='application/pdf',
+                     as_attachment=True, download_name=f'{inv_no}.pdf')
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PROGRESS
-#  - Admin/Trainer: full CRUD
-#  - Member: view own + add own records
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/progress')
 @login_required
 @trainer_required
 def progress():
-    all_progress = Progress.query.order_by(Progress.date.desc()).all()
-    all_members  = Member.query.all()
-    return render_template('progress.html', progress=all_progress, members=all_members)
+    return render_template('progress.html',
+                           progress=Progress.query.order_by(Progress.date.desc()).all(),
+                           members=Member.query.all())
 
 @app.route('/progress/add', methods=['POST'])
 @login_required
 @trainer_required
 def add_progress():
-    weight         = request.form.get('weight')
-    height         = request.form.get('height')
-    strength_score = request.form.get('strength_score')
-    bmi = None
-    if weight and height:
-        h   = float(height) / 100
-        bmi = round(float(weight) / (h ** 2), 2)
+    weight = request.form.get('weight'); height = request.form.get('height')
+    bmi = round(float(weight) / ((float(height)/100)**2), 2) if weight and height else None
     db.session.add(Progress(
-        member_id      = int(request.form.get('member_id')),
-        weight         = float(weight),
-        bmi            = bmi,
-        strength_score = float(strength_score) if strength_score else None
-    ))
-    db.session.commit()
-    flash('Progress record added!', 'success')
+        member_id=int(request.form.get('member_id')), weight=float(weight), bmi=bmi,
+        strength_score=float(request.form.get('strength_score')) if request.form.get('strength_score') else None
+    )); db.session.commit(); flash('Progress added!', 'success')
     return redirect(url_for('progress'))
 
 @app.route('/progress/delete/<int:id>')
 @login_required
 @trainer_required
 def delete_progress(id):
-    record = Progress.query.get_or_404(id)
-    db.session.delete(record)
-    db.session.commit()
-    flash('Progress record deleted.', 'success')
-    return redirect(url_for('progress'))
+    db.session.delete(Progress.query.get_or_404(id)); db.session.commit()
+    flash('Deleted.', 'success'); return redirect(url_for('progress'))
 
-# Member: view + add own progress
 @app.route('/my-progress')
 @login_required
 @member_required
 def my_progress():
-    member  = Member.query.filter_by(user_id=current_user.id).first()
-    records = Progress.query.filter_by(member_id=member.id).order_by(Progress.date.desc()).all()
-    return render_template('my_progress.html', member=member, records=records)
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    records      = Progress.query.filter_by(member_id=member.id).order_by(Progress.date.desc()).all()
+    measurements = BodyMeasurement.query.filter_by(member_id=member.id).order_by(BodyMeasurement.date.desc()).all()
+    return render_template('my_progress.html', member=member, records=records, measurements=measurements)
 
 @app.route('/my-progress/add', methods=['POST'])
 @login_required
 @member_required
 def add_my_progress():
     member = Member.query.filter_by(user_id=current_user.id).first()
-    if not member:
-        flash('Member profile not found.', 'danger')
-        return redirect(url_for('member_dashboard'))
-    weight         = request.form.get('weight')
-    height         = request.form.get('height')
-    strength_score = request.form.get('strength_score')
-    bmi = None
-    if weight and height:
-        h   = float(height) / 100
-        bmi = round(float(weight) / (h ** 2), 2)
+    weight = request.form.get('weight'); height = request.form.get('height')
+    bmi = round(float(weight) / ((float(height)/100)**2), 2) if weight and height else None
     db.session.add(Progress(
-        member_id      = member.id,
-        weight         = float(weight),
-        bmi            = bmi,
-        strength_score = float(strength_score) if strength_score else None
-    ))
-    db.session.commit()
-    flash('Progress record added!', 'success')
+        member_id=member.id, weight=float(weight), bmi=bmi,
+        strength_score=float(request.form.get('strength_score')) if request.form.get('strength_score') else None
+    )); db.session.commit(); flash('Progress recorded!', 'success')
+    return redirect(url_for('my_progress'))
+
+# Body measurements
+@app.route('/my-measurements/add', methods=['POST'])
+@login_required
+@member_required
+def add_measurement():
+    member = Member.query.filter_by(user_id=current_user.id).first()
+    db.session.add(BodyMeasurement(
+        member_id=member.id,
+        chest=float(request.form.get('chest')) if request.form.get('chest') else None,
+        waist=float(request.form.get('waist')) if request.form.get('waist') else None,
+        hips=float(request.form.get('hips')) if request.form.get('hips') else None,
+        thighs=float(request.form.get('thighs')) if request.form.get('thighs') else None,
+        arms=float(request.form.get('arms')) if request.form.get('arms') else None,
+        body_fat_pct=float(request.form.get('body_fat_pct')) if request.form.get('body_fat_pct') else None,
+    )); db.session.commit(); flash('Measurements saved!', 'success')
     return redirect(url_for('my_progress'))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CLASSES
-#  - Admin/Trainer: full CRUD
-#  - Member: view + book/cancel (on member dashboard)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/classes')
 @login_required
 @trainer_required
 def classes():
-    all_classes  = Class.query.all()
-    all_trainers = Trainer.query.all()
-    return render_template('classes.html', classes=all_classes, trainers=all_trainers)
+    return render_template('classes.html', classes=Class.query.all(), trainers=Trainer.query.all())
 
 @app.route('/classes/add', methods=['POST'])
 @login_required
 @trainer_required
 def add_class():
-    schedule = request.form.get('schedule')
     db.session.add(Class(
-        name        = request.form.get('name'),
-        trainer_id  = int(request.form.get('trainer_id')),
-        schedule    = datetime.strptime(schedule, '%Y-%m-%dT%H:%M'),
-        capacity    = int(request.form.get('capacity', 20)),
-        description = request.form.get('description')
-    ))
-    db.session.commit()
-    flash('Class added!', 'success')
+        name=request.form.get('name'), trainer_id=int(request.form.get('trainer_id')),
+        schedule=datetime.strptime(request.form.get('schedule'), '%Y-%m-%dT%H:%M'),
+        capacity=int(request.form.get('capacity', 20)), description=request.form.get('description')
+    )); db.session.commit(); flash('Class added!', 'success')
     return redirect(url_for('classes'))
 
 @app.route('/classes/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 @trainer_required
 def edit_class(id):
-    gym_class    = Class.query.get_or_404(id)
-    all_trainers = Trainer.query.all()
+    gym_class = Class.query.get_or_404(id)
     if request.method == 'POST':
-        gym_class.name        = request.form.get('name')
-        gym_class.trainer_id  = int(request.form.get('trainer_id'))
-        gym_class.schedule    = datetime.strptime(request.form.get('schedule'), '%Y-%m-%dT%H:%M')
-        gym_class.capacity    = int(request.form.get('capacity'))
+        gym_class.name = request.form.get('name')
+        gym_class.trainer_id = int(request.form.get('trainer_id'))
+        gym_class.schedule = datetime.strptime(request.form.get('schedule'), '%Y-%m-%dT%H:%M')
+        gym_class.capacity = int(request.form.get('capacity'))
         gym_class.description = request.form.get('description')
-        db.session.commit()
-        flash('Class updated!', 'success')
+        db.session.commit(); flash('Class updated!', 'success')
         return redirect(url_for('classes'))
-    return render_template('edit_class.html', gym_class=gym_class, trainers=all_trainers)
+    return render_template('edit_class.html', gym_class=gym_class, trainers=Trainer.query.all())
 
 @app.route('/classes/delete/<int:id>')
 @login_required
 @trainer_required
 def delete_class(id):
-    gym_class = Class.query.get_or_404(id)
-    db.session.delete(gym_class)
-    db.session.commit()
-    flash('Class deleted.', 'success')
-    return redirect(url_for('classes'))
+    db.session.delete(Class.query.get_or_404(id)); db.session.commit()
+    flash('Class deleted.', 'success'); return redirect(url_for('classes'))
 
-# Member: book a class
 @app.route('/member/book-class/<int:class_id>')
 @login_required
 @member_required
@@ -998,60 +1289,45 @@ def book_class(class_id):
     gym_class = Class.query.get_or_404(class_id)
     if ClassBooking.query.filter_by(member_id=member.id, class_id=class_id).first():
         flash('You already booked this class!', 'warning')
-        return redirect(url_for('member_dashboard'))
-    if len(gym_class.bookings) >= gym_class.capacity:
+    elif len(gym_class.bookings) >= gym_class.capacity:
         flash('This class is full!', 'danger')
-        return redirect(url_for('member_dashboard'))
-    db.session.add(ClassBooking(member_id=member.id, class_id=class_id))
-    db.session.commit()
-    flash(f'Booked {gym_class.name}!', 'success')
+    else:
+        db.session.add(ClassBooking(member_id=member.id, class_id=class_id))
+        db.session.commit(); flash(f'Booked {gym_class.name}!', 'success')
     return redirect(url_for('member_dashboard'))
 
-# Member: cancel a booking
 @app.route('/member/cancel-booking/<int:booking_id>')
 @login_required
 @member_required
 def cancel_booking(booking_id):
-    booking = ClassBooking.query.get_or_404(booking_id)
-    db.session.delete(booking)
-    db.session.commit()
-    flash('Booking cancelled.', 'success')
-    return redirect(url_for('member_dashboard'))
+    db.session.delete(ClassBooking.query.get_or_404(booking_id)); db.session.commit()
+    flash('Booking cancelled.', 'success'); return redirect(url_for('member_dashboard'))
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  REPORTS  (Admin only)
+#  REPORTS (Admin)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/reports')
 @login_required
 @admin_required
 def reports():
-    total_members    = Member.query.count()
-    total_trainers   = Trainer.query.count()
-    total_attendance = Attendance.query.count()
-    total_revenue    = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
-    recent_payments  = Payment.query.order_by(Payment.payment_date.desc()).limit(10).all()
-    cash_revenue     = db.session.query(db.func.sum(Payment.amount)).filter_by(method='cash').scalar() or 0
-    mpesa_revenue    = db.session.query(db.func.sum(Payment.amount)).filter_by(method='mpesa').scalar() or 0
-    card_revenue     = db.session.query(db.func.sum(Payment.amount)).filter_by(method='card').scalar() or 0
-    monthly_count    = Member.query.join(MembershipPlan).filter(MembershipPlan.name == 'Monthly').count()
-    quarterly_count  = Member.query.join(MembershipPlan).filter(MembershipPlan.name == 'Quarterly').count()
-    annual_count     = Member.query.join(MembershipPlan).filter(MembershipPlan.name == 'Annual').count()
     return render_template('reports.html',
-                           total_members=total_members,
-                           total_trainers=total_trainers,
-                           total_attendance=total_attendance,
-                           total_revenue=total_revenue,
-                           recent_payments=recent_payments,
-                           cash_revenue=cash_revenue,
-                           mpesa_revenue=mpesa_revenue,
-                           card_revenue=card_revenue,
-                           monthly_count=monthly_count,
-                           quarterly_count=quarterly_count,
-                           annual_count=annual_count)
+        total_members=Member.query.count(),
+        total_trainers=Trainer.query.count(),
+        total_attendance=Attendance.query.count(),
+        total_revenue=db.session.query(db.func.sum(Payment.amount)).scalar() or 0,
+        recent_payments=Payment.query.order_by(Payment.payment_date.desc()).limit(10).all(),
+        cash_revenue=db.session.query(db.func.sum(Payment.amount)).filter_by(method='cash').scalar() or 0,
+        mpesa_revenue=db.session.query(db.func.sum(Payment.amount)).filter_by(method='mpesa').scalar() or 0,
+        card_revenue=(db.session.query(db.func.sum(Payment.amount)).filter_by(method='card').scalar() or 0) +
+                     (db.session.query(db.func.sum(Payment.amount)).filter_by(method='stripe').scalar() or 0),
+        monthly_count=Member.query.join(MembershipPlan).filter(MembershipPlan.name=='Monthly').count(),
+        quarterly_count=Member.query.join(MembershipPlan).filter(MembershipPlan.name=='Quarterly').count(),
+        annual_count=Member.query.join(MembershipPlan).filter(MembershipPlan.name=='Annual').count()
+    )
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  SETTINGS  (All roles)
+#  SETTINGS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/settings')
@@ -1062,18 +1338,15 @@ def settings():
 @app.route('/settings/change-password', methods=['POST'])
 @login_required
 def change_password():
-    current_pw  = request.form.get('current_password')
-    new_pw      = request.form.get('new_password')
-    confirm_pw  = request.form.get('confirm_password')
+    current_pw = request.form.get('current_password')
+    new_pw     = request.form.get('new_password')
+    confirm_pw = request.form.get('confirm_password')
     if not bcrypt.check_password_hash(current_user.password_hash, current_pw):
-        flash('Current password is incorrect.', 'danger')
-        return redirect(url_for('settings'))
+        flash('Current password is incorrect.', 'danger'); return redirect(url_for('settings'))
     if new_pw != confirm_pw:
-        flash('Passwords do not match.', 'danger')
-        return redirect(url_for('settings'))
+        flash('Passwords do not match.', 'danger'); return redirect(url_for('settings'))
     current_user.password_hash = bcrypt.generate_password_hash(new_pw).decode('utf-8')
-    db.session.commit()
-    flash('Password updated!', 'success')
+    db.session.commit(); flash('Password updated!', 'success')
     return redirect(url_for('settings'))
 
 # ═══════════════════════════════════════════════════════════════════════════════

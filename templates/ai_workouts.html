@@ -1,0 +1,124 @@
+{% extends "member_base.html" %}
+{% block title %}AI Workout Suggestions - Gym{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#8B5CF6,#1A73E8);border-radius:10px;
+                    display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-robot" style="color:#fff;font-size:1rem;"></i>
+        </div>
+        <h4 class="text-white mb-0" style="font-weight:800;">AI Workout Suggestions</h4>
+    </div>
+    <p class="text-white-50 small">
+        Personalized for <strong>{{ member.name }}</strong>
+        {% if member.age %} · Age {{ member.age }} {% endif %}
+        {% if member.age_group %}({{ member.age_group }}){% endif %}
+        {% if member.goal %} · Goal: {{ member.goal }}{% endif %}
+    </p>
+</div>
+
+{% if suggestions %}
+<div class="row">
+    {% for s in suggestions %}
+    <div class="col-md-4 mb-4">
+        <div class="member-card" style="height:100%;display:flex;flex-direction:column;">
+            <!-- Card header colored by type -->
+            <div style="padding:16px 18px;
+                        {% if s.type == 'HIIT' %}background:linear-gradient(135deg,rgba(248,81,73,0.2),rgba(245,158,11,0.1));border-bottom:2px solid #F85149;
+                        {% elif s.type == 'Strength' %}background:linear-gradient(135deg,rgba(139,92,246,0.2),rgba(26,115,232,0.1));border-bottom:2px solid #8B5CF6;
+                        {% elif s.type == 'Cardio' %}background:linear-gradient(135deg,rgba(26,115,232,0.2),rgba(54,185,204,0.1));border-bottom:2px solid #1A73E8;
+                        {% elif s.type == 'Flexibility' %}background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(26,115,232,0.1));border-bottom:2px solid #10B981;
+                        {% else %}background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(16,185,129,0.1));border-bottom:2px solid #F59E0B;
+                        {% endif %}">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+                        {% if s.type == 'HIIT' %}color:#F85149;
+                        {% elif s.type == 'Strength' %}color:#8B5CF6;
+                        {% elif s.type == 'Cardio' %}color:#1A73E8;
+                        {% elif s.type == 'Flexibility' %}color:#10B981;
+                        {% else %}color:#F59E0B;{% endif %}">
+                        <i class="fas fa-{% if s.type == 'HIIT' %}fire{% elif s.type == 'Strength' %}dumbbell{% elif s.type == 'Cardio' %}running{% elif s.type == 'Flexibility' %}spa{% else %}star{% endif %} mr-1"></i>
+                        {{ s.type }}
+                    </span>
+                    <span style="font-size:0.68rem;background:#21262D;color:#8B949E;padding:2px 8px;border-radius:10px;">
+                        {{ s.difficulty }}
+                    </span>
+                </div>
+                <h5 class="text-white mb-0" style="font-size:1rem;font-weight:800;">{{ s.name }}</h5>
+            </div>
+
+            <div class="member-card-body" style="flex:1;display:flex;flex-direction:column;">
+                <!-- Duration + AI badge -->
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <span style="color:#8B949E;font-size:0.8rem;">
+                        <i class="fas fa-clock mr-1"></i>{{ s.duration }} min
+                    </span>
+                    <span style="background:rgba(139,92,246,0.15);color:#8B5CF6;font-size:0.68rem;font-weight:700;
+                                 padding:2px 8px;border-radius:10px;">
+                        <i class="fas fa-robot mr-1"></i>AI Generated
+                    </span>
+                </div>
+
+                <!-- Description -->
+                <p style="color:#C9D1D9;font-size:0.82rem;line-height:1.6;margin-bottom:12px;flex:1;">
+                    {{ s.description }}
+                </p>
+
+                <!-- Exercises -->
+                {% if s.exercises %}
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:0.72rem;font-weight:700;color:#8B949E;text-transform:uppercase;
+                                letter-spacing:0.5px;margin-bottom:8px;">Exercises</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+                        {% for ex in s.exercises %}
+                        <span style="background:#21262D;color:#C9D1D9;font-size:0.72rem;padding:3px 8px;
+                                     border-radius:6px;border:1px solid #30363D;">
+                            {{ ex }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Save button -->
+                <form method="POST" action="{{ url_for('save_ai_workout') }}">
+                    <input type="hidden" name="name" value="{{ s.name }}">
+                    <input type="hidden" name="type" value="{{ s.type }}">
+                    <input type="hidden" name="duration" value="{{ s.duration }}">
+                    <input type="hidden" name="difficulty" value="{{ s.difficulty }}">
+                    <input type="hidden" name="description" value="{{ s.description }}{% if s.exercises %} — Exercises: {{ s.exercises|join(', ') }}{% endif %}">
+                    <button type="submit" class="btn btn-block btn-sm"
+                            style="background:#1A73E8;color:#fff;border-radius:8px;font-weight:600;padding:8px;">
+                        <i class="fas fa-save mr-1"></i> Save to My Workouts
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Actions -->
+<div style="text-align:center;margin-top:8px;">
+    <a href="{{ url_for('ai_suggest_workouts') }}" class="btn btn-sm mr-2"
+       style="background:#21262D;color:#E6EDF3;border-radius:8px;padding:8px 20px;font-weight:600;">
+        <i class="fas fa-sync mr-1"></i> Generate New Suggestions
+    </a>
+    <a href="{{ url_for('my_workouts') }}" class="btn btn-sm"
+       style="background:#30363D;color:#E6EDF3;border-radius:8px;padding:8px 20px;font-weight:600;">
+        <i class="fas fa-arrow-left mr-1"></i> Back to My Workouts
+    </a>
+</div>
+{% else %}
+<div class="member-card">
+    <div class="member-card-body text-center py-4">
+        <i class="fas fa-robot fa-2x mb-3" style="color:#8B5CF6;opacity:0.5;"></i>
+        <p class="text-white-50">Could not generate suggestions right now. Make sure your profile (age, goal) is complete.</p>
+        <a href="{{ url_for('my_workouts') }}" class="btn btn-sm btn-primary">Back to Workouts</a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

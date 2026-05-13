@@ -3,7 +3,6 @@
 
 {% block content %}
 
-<!-- Page Header -->
 <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
     <div>
         <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
@@ -32,19 +31,19 @@
         </div>
         <div class="t-stat-icon"><i class="fas fa-user-check"></i></div>
     </div>
-    <div class="t-stat-card red">
-        <div>
-            <div class="t-stat-label">Inactive</div>
-            <div class="t-stat-value">{{ members|selectattr('status','eq','inactive')|list|length }}</div>
-        </div>
-        <div class="t-stat-icon"><i class="fas fa-user-times"></i></div>
-    </div>
     <div class="t-stat-card yellow">
         <div>
-            <div class="t-stat-label">Plans</div>
-            <div class="t-stat-value">{{ plans|length }}</div>
+            <div class="t-stat-label">Youth</div>
+            <div class="t-stat-value">{{ members|selectattr('age_group','eq','Youth')|list|length }}</div>
         </div>
-        <div class="t-stat-icon"><i class="fas fa-id-card"></i></div>
+        <div class="t-stat-icon"><i class="fas fa-child"></i></div>
+    </div>
+    <div class="t-stat-card purple">
+        <div>
+            <div class="t-stat-label">Senior</div>
+            <div class="t-stat-value">{{ members|selectattr('age_group','eq','Senior')|list|length }}</div>
+        </div>
+        <div class="t-stat-icon"><i class="fas fa-user-friends"></i></div>
     </div>
 </div>
 
@@ -61,10 +60,11 @@
                     <th>#</th>
                     <th>Member</th>
                     <th>Contact</th>
+                    <th>Age / Group</th>
                     <th>Plan</th>
                     <th>Goal</th>
                     <th>Status</th>
-                    <th>Joined</th>
+                    <th>M-Pesa</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -75,21 +75,32 @@
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <div class="t-avatar" style="background:linear-gradient(135deg,
-                                {% if loop.index % 4 == 0 %}#1A73E8,#0D47A1
-                                {% elif loop.index % 4 == 1 %}#10B981,#065F46
-                                {% elif loop.index % 4 == 2 %}#8B5CF6,#5B21B6
-                                {% else %}#F59E0B,#92400E{% endif %});">
+                                {% if member.age_group == 'Youth' %}#10B981,#1A73E8
+                                {% elif member.age_group == 'Senior' %}#8B5CF6,#F59E0B
+                                {% else %}#1A73E8,#8B5CF6{% endif %});">
                                 {{ member.name[0].upper() }}
                             </div>
                             <div>
                                 <div style="font-weight:600;color:#E6EDF3;">{{ member.name }}</div>
-                                <div style="font-size:0.75rem;color:#8B949E;">ID #{{ member.id }}</div>
+                                <div style="font-size:0.72rem;color:#8B949E;">ID #{{ member.id }}</div>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div style="font-size:0.82rem;color:#C9D1D9;">{{ member.email }}</div>
-                        <div style="font-size:0.75rem;color:#8B949E;">{{ member.phone or '—' }}</div>
+                        <div style="font-size:0.82rem;color:#C9D1D9;">{{ member.email or '—' }}</div>
+                        <div style="font-size:0.72rem;color:#8B949E;">{{ member.phone or '—' }}</div>
+                    </td>
+                    <td>
+                        <div style="font-size:0.82rem;color:#E6EDF3;">
+                            {{ member.age or '—' }} yrs
+                        </div>
+                        <span class="t-badge
+                            {% if member.age_group == 'Youth' %}t-badge-success
+                            {% elif member.age_group == 'Senior' %}t-badge-warning
+                            {% else %}t-badge-primary{% endif %}"
+                            style="font-size:0.65rem;">
+                            {{ member.age_group or 'Adult' }}
+                        </span>
                     </td>
                     <td>
                         {% if member.plan %}
@@ -106,16 +117,22 @@
                             <span class="t-badge t-badge-danger">● Inactive</span>
                         {% endif %}
                     </td>
-                    <td style="font-size:0.82rem;color:#8B949E;">
-                        {{ member.join_date.strftime('%d %b %Y') if member.join_date else 'N/A' }}
+                    <td>
+                        {% if member.mpesa_phone %}
+                            <span style="color:#10B981;font-size:0.78rem;">
+                                <i class="fas fa-mobile-alt mr-1"></i>{{ member.mpesa_phone }}
+                            </span>
+                        {% else %}
+                            <span style="color:#8B949E;font-size:0.78rem;">—</span>
+                        {% endif %}
                     </td>
                     <td>
                         <div style="display:flex;gap:6px;">
-                            <a href="{{ url_for('edit_member', id=member.id) }}" class="t-btn t-btn-sm t-btn-warning" title="Edit">
+                            <a href="{{ url_for('edit_member', id=member.id) }}" class="t-btn t-btn-sm t-btn-warning">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <a href="{{ url_for('delete_member', id=member.id) }}"
-                               class="t-btn t-btn-sm t-btn-danger" title="Delete"
+                               class="t-btn t-btn-sm t-btn-danger"
                                onclick="return confirm('Delete {{ member.name }}?')">
                                 <i class="fas fa-trash"></i>
                             </a>
@@ -124,9 +141,9 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8" style="text-align:center;padding:40px;color:#8B949E;">
+                    <td colspan="9" style="text-align:center;padding:40px;color:#8B949E;">
                         <i class="fas fa-users" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>
-                        No members found. Add your first member!
+                        No members yet. Add your first member!
                     </td>
                 </tr>
                 {% endfor %}
@@ -145,54 +162,71 @@
             </div>
             <form method="POST" action="{{ url_for('add_member') }}">
                 <div class="modal-body">
+
+                    <!-- Basic Info -->
+                    <p style="font-size:0.7rem;font-weight:800;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Basic Info</p>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Full Name <span style="color:#F85149;">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Full Name *</label>
                                 <input type="text" class="form-control" name="name" required placeholder="e.g. Jane Wanjiku">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Email Address <span style="color:#F85149;">*</span></label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Email *</label>
                                 <input type="email" class="form-control" name="email" required placeholder="jane@email.com">
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Phone Number</label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Phone</label>
                                 <input type="text" class="form-control" name="phone" placeholder="+254 7XX XXX XXX">
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Membership Plan <span style="color:#F85149;">*</span></label>
-                                <select class="form-control" name="plan_id" required>
-                                    <option value="">Select Plan</option>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Date of Birth</label>
+                                <input type="date" class="form-control" name="date_of_birth">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Age Group</label>
+                                <select class="form-control" name="age_group">
+                                    <option value="Youth">Youth (Under 18)</option>
+                                    <option value="Adult" selected>Adult (18–59)</option>
+                                    <option value="Senior">Senior (60+)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Membership -->
+                    <p style="font-size:0.7rem;font-weight:800;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin:10px 0;">Membership</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Plan</label>
+                                <select class="form-control" name="plan_id">
+                                    <option value="">No Plan</option>
                                     {% for plan in plans %}
-                                    <option value="{{ plan.id }}">{{ plan.name }} — KSh {{ "%.0f"|format(plan.price) }}</option>
+                                    <option value="{{ plan.id }}">{{ plan.name }} — KSh {{ "{:,.0f}".format(plan.price) }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Fitness Goal</label>
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Goal</label>
                                 <select class="form-control" name="goal">
-                                    <option value="">Select Goal</option>
-                                    <option value="Weight Loss">Weight Loss</option>
-                                    <option value="Muscle Gain">Muscle Gain</option>
-                                    <option value="General Fitness">General Fitness</option>
-                                    <option value="Endurance">Endurance</option>
-                                    <option value="Flexibility">Flexibility</option>
+                                    {% for g in ['Weight Loss','Muscle Gain','General Fitness','Endurance','Flexibility'] %}
+                                    <option value="{{ g }}">{{ g }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Status</label>
                                 <select class="form-control" name="status">
@@ -202,13 +236,47 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Payment -->
+                    <p style="font-size:0.7rem;font-weight:800;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin:10px 0;">Payment</p>
                     <div class="row">
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Password <span style="color:#F85149;">*</span></label>
-                                <input type="password" class="form-control" name="password" required placeholder="Create a login password">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">
+                                    <i class="fas fa-mobile-alt mr-1" style="color:#10B981;"></i>M-Pesa Number
+                                </label>
+                                <input type="tel" class="form-control" name="mpesa_phone" placeholder="0712345678">
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Password *</label>
+                                <input type="password" class="form-control" name="password" required placeholder="Login password">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency -->
+                    <p style="font-size:0.7rem;font-weight:800;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin:10px 0;">Emergency Contact</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Name</label>
+                                <input type="text" class="form-control" name="emergency_contact_name" placeholder="Contact name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Phone</label>
+                                <input type="tel" class="form-control" name="emergency_contact_phone" placeholder="0712345678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Medical Notes</label>
+                        <textarea class="form-control" name="medical_notes" rows="2"
+                                  placeholder="Any conditions, injuries or restrictions..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

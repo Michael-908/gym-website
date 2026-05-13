@@ -3,59 +3,108 @@
 
 {% block content %}
 
-<div style="margin-bottom:24px;">
-    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
-        <i class="fas fa-credit-card" style="color:#8B5CF6;margin-right:8px;"></i>My Payments
-    </h4>
-    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Membership plans, payment history and renewal.</p>
+<!-- M-Pesa Pending Alert -->
+{% if pending_mpesa %}
+<div style="background:rgba(16,185,129,0.1);border:1px solid #10B981;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+    <div style="width:40px;height:40px;background:#10B981;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-mobile-alt" style="color:#fff;font-size:1.1rem;"></i>
+    </div>
+    <div style="flex:1;">
+        <div style="font-weight:700;color:#10B981;font-size:0.9rem;">M-Pesa Payment Pending</div>
+        <div style="color:#8B949E;font-size:0.8rem;">Check your phone and enter your M-Pesa PIN to complete payment.</div>
+    </div>
+    <div id="mpesa-status-badge" class="badge badge-warning" style="font-size:0.75rem;">Checking...</div>
 </div>
-
-<!-- Membership Status Alert -->
-{% if latest_payment %}
-{% set days_left = (latest_payment.expiry_date - today).days if latest_payment.expiry_date else -1 %}
-{% if days_left > 7 %}
-<div class="alert alert-success" style="margin-bottom:20px;">
-    <span><i class="fas fa-check-circle" style="margin-right:8px;"></i>
-    Your membership is <strong>active</strong> — <strong>{{ days_left }} days remaining</strong>
-    (expires {{ latest_payment.expiry_date.strftime('%d %b %Y') }})
-    </span>
-</div>
-{% elif days_left > 0 %}
-<div class="alert alert-warning" style="margin-bottom:20px;">
-    <span><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>
-    Membership expiring soon — only <strong>{{ days_left }} days left!</strong> Renew below.
-    </span>
-</div>
-{% else %}
-<div class="alert alert-danger" style="margin-bottom:20px;">
-    <span><i class="fas fa-times-circle" style="margin-right:8px;"></i>
-    Your membership has <strong>expired</strong>. Please renew to continue using the gym.
-    </span>
-</div>
+<script>
+(function() {
+    var checkoutId = "{{ pending_mpesa.checkout_request_id }}";
+    var interval = setInterval(function() {
+        fetch('/payment/mpesa/status/' + encodeURIComponent(checkoutId))
+            .then(r => r.json())
+            .then(d => {
+                var badge = document.getElementById('mpesa-status-badge');
+                if (d.status === 'completed') {
+                    badge.className = 'badge badge-success';
+                    badge.textContent = '✓ Paid';
+                    clearInterval(interval);
+                    setTimeout(() => location.reload(), 1500);
+                } else if (d.status === 'failed') {
+                    badge.className = 'badge badge-danger';
+                    badge.textContent = '✗ Failed';
+                    clearInterval(interval);
+                } else {
+                    badge.className = 'badge badge-warning';
+                    badge.textContent = 'Pending...';
+                }
+            });
+    }, 4000);
+})();
+</script>
 {% endif %}
+
+<!-- Membership Status -->
+{% if latest_payment %}
+<div class="member-card mb-4">
+    <div class="member-card-header"><i class="fas fa-id-card mr-2"></i>Membership Status</div>
+    <div class="member-card-body">
+        {% if latest_payment.expiry_date %}
+        {% set days_left = (latest_payment.expiry_date - today).days %}
+        {% if days_left > 7 %}
+        <div style="background:rgba(16,185,129,0.1);border:1px solid #10B981;border-radius:10px;padding:14px;">
+            <div style="font-weight:700;color:#10B981;margin-bottom:4px;"><i class="fas fa-check-circle mr-2"></i>Active Membership</div>
+            <div style="color:#C9D1D9;font-size:0.85rem;"><strong>{{ days_left }} days remaining</strong> — expires {{ latest_payment.expiry_date.strftime('%d %b %Y') }}</div>
+        </div>
+        {% elif days_left > 0 %}
+        <div style="background:rgba(245,158,11,0.1);border:1px solid #F59E0B;border-radius:10px;padding:14px;">
+            <div style="font-weight:700;color:#F59E0B;margin-bottom:4px;"><i class="fas fa-exclamation-triangle mr-2"></i>Expiring Soon!</div>
+            <div style="color:#C9D1D9;font-size:0.85rem;">Only <strong>{{ days_left }} days left</strong> — renew now to avoid interruption.</div>
+        </div>
+        {% else %}
+        <div style="background:rgba(248,81,73,0.1);border:1px solid #F85149;border-radius:10px;padding:14px;">
+            <div style="font-weight:700;color:#F85149;margin-bottom:4px;"><i class="fas fa-times-circle mr-2"></i>Membership Expired</div>
+            <div style="color:#C9D1D9;font-size:0.85rem;">Please renew your membership below.</div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
 {% endif %}
 
 <!-- Membership Plans -->
-<div class="m-card" style="margin-bottom:24px;">
-    <div class="m-card-header">
-        <span><i class="fas fa-id-card" style="margin-right:8px;color:#8B5CF6;"></i>Available Membership Plans</span>
+<div class="member-card mb-4">
+    <div class="member-card-header">
+        <i class="fas fa-credit-card mr-2"></i>Choose a Membership Plan
     </div>
-    <div class="m-card-body">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
+    <div class="member-card-body">
+        <div class="row">
             {% for plan in plans %}
-            <div style="background:#0D1117;border:1px solid #30363D;border-radius:12px;
-                        padding:24px;text-align:center;transition:border-color 0.2s;"
-                 onmouseover="this.style.borderColor='#8B5CF6'" onmouseout="this.style.borderColor='#30363D'">
-                <div style="font-weight:700;color:#E6EDF3;font-size:0.95rem;margin-bottom:8px;">{{ plan.name }}</div>
-                <div style="font-size:1.8rem;font-weight:800;color:#8B5CF6;margin-bottom:4px;">
-                    KSh {{ "%.0f"|format(plan.price) }}
-                </div>
-                <div style="font-size:0.8rem;color:#8B949E;margin-bottom:20px;">{{ plan.duration_days }} days access</div>
-                <form method="POST" action="{{ url_for('stripe_payment', plan_id=plan.id) }}">
-                    <button type="submit" class="m-btn m-btn-success" style="width:100%;justify-content:center;">
-                        <i class="fas fa-credit-card"></i> Pay with Stripe
+            <div class="col-md-4 mb-3">
+                <div style="background:#0D1117;border:1px solid #30363D;border-radius:14px;padding:20px;text-align:center;
+                            transition:border-color 0.2s;position:relative;overflow:hidden;"
+                     onmouseover="this.style.borderColor='#1A73E8'" onmouseout="this.style.borderColor='#30363D'">
+                    {% if loop.index == 2 %}
+                    <div style="position:absolute;top:10px;right:-18px;background:#F59E0B;color:#000;font-size:0.65rem;
+                                font-weight:800;padding:3px 24px;transform:rotate(35deg);">POPULAR</div>
+                    {% endif %}
+                    <h5 class="text-white mb-1" style="font-weight:800;">{{ plan.name }}</h5>
+                    <div style="font-size:1.6rem;font-weight:800;color:#1A73E8;margin:6px 0;">KSh {{ "{:,.0f}".format(plan.price) }}</div>
+                    <div class="text-white-50 small mb-4">{{ plan.duration_days }} days access</div>
+
+                    <!-- Pay with Stripe -->
+                    <form method="POST" action="{{ url_for('stripe_payment', plan_id=plan.id) }}" class="mb-2">
+                        <button type="submit" class="btn btn-sm w-100"
+                                style="background:#635BFF;color:#fff;border-radius:8px;font-weight:600;padding:8px;">
+                            <i class="fas fa-credit-card mr-1"></i> Pay with Card (Stripe)
+                        </button>
+                    </form>
+
+                    <!-- Pay with M-Pesa -->
+                    <button class="btn btn-sm w-100"
+                            style="background:#10B981;color:#fff;border-radius:8px;font-weight:600;padding:8px;"
+                            data-toggle="modal" data-target="#mpesaModal-{{ plan.id }}">
+                        <i class="fas fa-mobile-alt mr-1"></i> Pay with M-Pesa
                     </button>
-                </form>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -63,69 +112,120 @@
 </div>
 
 <!-- Payment History -->
-<div class="m-card">
-    <div class="m-card-header">
-        <span><i class="fas fa-history" style="margin-right:8px;color:#10B981;"></i>Payment History</span>
-        <span class="m-badge m-badge-success">{{ payments|length }} records</span>
+<div class="member-card mb-4">
+    <div class="member-card-header">
+        <i class="fas fa-history mr-2"></i>Payment History
     </div>
-    <div style="overflow-x:auto;">
+    <div class="member-card-body" style="padding:0;">
         {% if payments %}
-        <table class="m-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Payment Date</th>
-                    <th>Expiry Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for payment in payments %}
-                <tr>
-                    <td style="color:#8B949E;">{{ loop.index }}</td>
-                    <td>
-                        <span style="color:#10B981;font-weight:700;">KSh {{ "%.2f"|format(payment.amount) }}</span>
-                    </td>
-                    <td>
-                        {% if payment.method == 'mpesa' %}
-                            <span class="m-badge m-badge-success"><i class="fas fa-mobile-alt" style="margin-right:4px;"></i>M-Pesa</span>
-                        {% elif payment.method == 'cash' %}
-                            <span class="m-badge m-badge-primary"><i class="fas fa-money-bill" style="margin-right:4px;"></i>Cash</span>
-                        {% elif payment.method in ['stripe', 'card'] %}
-                            <span class="m-badge m-badge-info"><i class="fas fa-credit-card" style="margin-right:4px;"></i>
-                            {{ 'Stripe' if payment.method == 'stripe' else 'Card' }}</span>
-                        {% else %}
-                            <span class="m-badge m-badge-secondary">{{ payment.method|upper if payment.method else 'N/A' }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="color:#C9D1D9;font-size:0.82rem;">
-                        {{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'N/A' }}
-                    </td>
-                    <td style="font-size:0.82rem;">
-                        {% if payment.expiry_date %}
-                        <span style="color:#C9D1D9;">{{ payment.expiry_date.strftime('%d %b %Y') }}</span>
-                        {% else %}
-                        <span style="color:#8B949E;">N/A</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="m-badge m-badge-{{ 'success' if payment.status == 'completed' else 'warning' }}">
-                            {{ payment.status }}
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% for payment in payments %}
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #21262D;">
+            <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+                        flex-shrink:0;margin-right:12px;
+                        {% if payment.method == 'mpesa' %}background:rgba(16,185,129,0.15);
+                        {% elif payment.method in ['stripe','card'] %}background:rgba(99,91,255,0.15);
+                        {% else %}background:rgba(26,115,232,0.15);{% endif %}">
+                {% if payment.method == 'mpesa' %}
+                    <i class="fas fa-mobile-alt" style="color:#10B981;"></i>
+                {% elif payment.method in ['stripe','card'] %}
+                    <i class="fas fa-credit-card" style="color:#635BFF;"></i>
+                {% else %}
+                    <i class="fas fa-money-bill" style="color:#1A73E8;"></i>
+                {% endif %}
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:700;color:#E6EDF3;font-size:0.9rem;">
+                    KSh {{ "{:,.2f}".format(payment.amount) }}
+                    {% if payment.plan %}<span style="color:#8B949E;font-weight:400;font-size:0.8rem;">— {{ payment.plan.name }}</span>{% endif %}
+                </div>
+                <div style="color:#8B949E;font-size:0.75rem;">
+                    {{ payment.payment_date.strftime('%d %b %Y at %I:%M %p') if payment.payment_date else 'N/A' }}
+                    &nbsp;·&nbsp; {{ (payment.method or 'N/A')|upper }}
+                    {% if payment.mpesa_receipt %}&nbsp;·&nbsp; <span style="color:#10B981;">{{ payment.mpesa_receipt }}</span>{% endif %}
+                    {% if payment.invoice_number %}&nbsp;·&nbsp; {{ payment.invoice_number }}{% endif %}
+                </div>
+                {% if payment.expiry_date %}
+                <div style="color:#8B949E;font-size:0.72rem;">
+                    <i class="fas fa-calendar mr-1"></i>Expires: {{ payment.expiry_date.strftime('%d %b %Y') }}
+                </div>
+                {% endif %}
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <span class="badge badge-{{ 'success' if payment.status == 'completed' else 'warning' }}">
+                    {{ payment.status }}
+                </span>
+                <a href="{{ url_for('download_invoice', payment_id=payment.id) }}"
+                   style="color:#1A73E8;font-size:0.72rem;text-decoration:none;">
+                    <i class="fas fa-download mr-1"></i>Invoice
+                </a>
+            </div>
+        </div>
+        {% endfor %}
         {% else %}
-        <div style="padding:60px;text-align:center;color:#8B949E;">
-            <i class="fas fa-receipt" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
-            <p>No payment history yet. Choose a membership plan above to get started.</p>
+        <div class="text-center text-white-50 py-4">
+            <i class="fas fa-receipt fa-2x mb-2"></i>
+            <p>No payment history yet. Subscribe to a plan above!</p>
         </div>
         {% endif %}
     </div>
 </div>
+
+<!-- M-Pesa Modals -->
+{% for plan in plans %}
+<div class="modal fade" id="mpesaModal-{{ plan.id }}" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
+            <div class="modal-header" style="border-bottom:1px solid #30363D;">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-mobile-alt mr-2" style="color:#10B981;"></i>M-Pesa Payment
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form method="POST" action="{{ url_for('mpesa_payment', plan_id=plan.id) }}">
+                <div class="modal-body">
+                    <!-- Plan summary -->
+                    <div style="background:#0D1117;border-radius:10px;padding:14px;margin-bottom:16px;text-align:center;">
+                        <div style="font-size:0.8rem;color:#8B949E;margin-bottom:4px;">{{ plan.name }} Membership</div>
+                        <div style="font-size:1.8rem;font-weight:800;color:#10B981;">KSh {{ "{:,.0f}".format(plan.price) }}</div>
+                        <div style="font-size:0.75rem;color:#8B949E;">{{ plan.duration_days }} days</div>
+                    </div>
+                    <!-- Payer info -->
+                    <div style="background:rgba(26,115,232,0.08);border:1px solid rgba(26,115,232,0.2);border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.82rem;color:#C9D1D9;">
+                        <i class="fas fa-user mr-1" style="color:#1A73E8;"></i>
+                        Paying for: <strong>{{ member.name }}</strong>
+                        {% if member.id %} (Member #{{ member.id }}){% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">
+                            M-Pesa Phone Number <span style="color:#F85149;">*</span>
+                        </label>
+                        <input type="tel" name="phone" class="form-control" required
+                               placeholder="e.g. 0712345678"
+                               value="{{ member.mpesa_phone or member.phone or '' }}"
+                               style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;border-radius:8px;">
+                        <small style="color:#8B949E;font-size:0.75rem;">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            You will receive a PIN prompt on your phone. Enter your M-Pesa PIN to confirm.
+                        </small>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.08);border-radius:8px;padding:10px;font-size:0.78rem;color:#8B949E;">
+                        <strong style="color:#10B981;">How it works:</strong><br>
+                        1. Enter your M-Pesa number above<br>
+                        2. Click "Send STK Push"<br>
+                        3. A pop-up will appear on your phone<br>
+                        4. Enter your M-Pesa PIN to complete
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #30363D;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm" style="background:#10B981;color:#fff;font-weight:600;border-radius:8px;padding:8px 20px;">
+                        <i class="fas fa-paper-plane mr-1"></i> Send STK Push
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 {% endblock %}
