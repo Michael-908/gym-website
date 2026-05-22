@@ -3,117 +3,213 @@
 
 {% block content %}
 
+<!-- Page Header -->
+<div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+            <i class="fas fa-running" style="color:#36B9CC;margin-right:8px;"></i>My Workouts
+        </h4>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Your personal and trainer-assigned workout plans.</p>
+    </div>
+    <button class="m-btn m-btn-info" data-toggle="modal" data-target="#addWorkoutModal">
+        <i class="fas fa-plus"></i> Add Workout
+    </button>
+</div>
+
 <!-- AI Suggestion Banner -->
-<div style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(26,115,232,0.1));
-            border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:16px 18px;
-            margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+<div style="background:linear-gradient(135deg,rgba(139,92,246,0.12),rgba(26,115,232,0.08));
+            border:1px solid rgba(139,92,246,0.25);border-radius:14px;padding:16px 20px;
+            margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:42px;height:42px;background:linear-gradient(135deg,#8B5CF6,#1A73E8);border-radius:10px;
-                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;
+                    background:linear-gradient(135deg,#8B5CF6,#1A73E8);
+                    display:flex;align-items:center;justify-content:center;">
             <i class="fas fa-robot" style="color:#fff;font-size:1.1rem;"></i>
         </div>
         <div>
-            <div style="font-weight:700;color:#E6EDF3;font-size:0.9rem;">Get AI Workout Suggestions</div>
-            <div style="color:#8B949E;font-size:0.78rem;">Personalized plans based on your age, goal & fitness level.</div>
+            <div style="font-weight:800;color:#E6EDF3;font-size:0.9rem;">Get AI-Powered Workout Suggestions</div>
+            <div style="color:#8B949E;font-size:0.78rem;margin-top:2px;">
+                Personalized plans based on your age, goal & fitness level.
+            </div>
         </div>
     </div>
     <a href="{{ url_for('ai_suggest_workouts') }}"
-       style="background:linear-gradient(135deg,#8B5CF6,#1A73E8);color:#fff;padding:9px 18px;border-radius:10px;
-              font-size:0.82rem;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">
-        <i class="fas fa-magic mr-1"></i> Get Suggestions
+       style="background:linear-gradient(135deg,#8B5CF6,#1A73E8);color:#fff;padding:9px 20px;
+              border-radius:10px;font-size:0.82rem;font-weight:700;text-decoration:none;
+              white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-magic"></i> Get Suggestions
     </a>
 </div>
 
-<div class="member-card mb-4">
+<!-- Personal Workouts -->
+<div class="member-card" style="margin-bottom:20px;">
     <div class="member-card-header">
-        <span><i class="fas fa-running mr-2"></i>My Workouts</span>
-        <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addWorkoutModal">
-            <i class="fas fa-plus mr-1"></i> Add
-        </button>
+        <i class="fas fa-user" style="color:#36B9CC;"></i>
+        My Personal Workouts
+        <span style="margin-left:auto;background:rgba(54,185,204,0.15);color:#36B9CC;
+                     padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+            {{ personal_workouts|length }}
+        </span>
     </div>
-    <div class="member-card-body">
-
-        <!-- Personal Workouts -->
-        <h6 class="text-white-50 mb-3 small text-uppercase">Personal Workouts</h6>
+    <div class="member-card-body" style="padding:0;">
         {% if personal_workouts %}
-            {% for workout in personal_workouts %}
-            <div class="member-list-item">
-                <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                        <div class="font-weight-bold text-white">{{ workout.name }}</div>
-                        {% if workout.is_ai_suggested %}
-                        <span style="background:rgba(139,92,246,0.15);color:#8B5CF6;font-size:0.65rem;font-weight:700;
-                                     padding:1px 6px;border-radius:8px;">AI</span>
-                        {% endif %}
-                    </div>
-                    <div class="text-white-50 small">
-                        <span class="badge badge-primary mr-1">{{ workout.type or 'General' }}</span>
-                        <span class="badge badge-secondary mr-1">{{ workout.difficulty or 'N/A' }}</span>
-                        {% if workout.duration %}<i class="fas fa-clock mr-1"></i>{{ workout.duration }} min{% endif %}
-                    </div>
-                    {% if workout.description %}
-                    <div class="text-white-50 small mt-1" style="font-size:0.75rem;">{{ workout.description[:80] }}{% if workout.description|length > 80 %}…{% endif %}</div>
-                    {% endif %}
-                    {% for comment in workout.comments %}
-                    <div style="background:rgba(26,115,232,0.1);border-left:2px solid #1A73E8;padding:6px 10px;
-                                border-radius:0 6px 6px 0;margin-top:6px;font-size:0.78rem;">
-                        <span style="color:#1A73E8;font-weight:700;">{{ comment.trainer.name if comment.trainer else 'Trainer' }}:</span>
-                        <span style="color:#C9D1D9;"> {{ comment.comment }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <button class="btn btn-sm" style="background:#21262D;color:#10B981;font-size:0.72rem;padding:4px 8px;border-radius:6px;"
-                            data-toggle="modal" data-target="#logModal-{{ workout.id }}">
-                        <i class="fas fa-check"></i> Log
-                    </button>
-                    <a href="{{ url_for('delete_my_workout', id=workout.id) }}"
-                       class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:4px 8px;"
-                       onclick="return confirm('Delete?')">
-                        <i class="fas fa-trash"></i>
-                    </a>
-                </div>
+        {% for workout in personal_workouts %}
+        <div style="display:flex;align-items:flex-start;padding:14px 18px;border-bottom:1px solid #21262D;gap:12px;">
+
+            <!-- Type icon -->
+            <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;
+                        display:flex;align-items:center;justify-content:center;
+                        {% if workout.type == 'HIIT' %}background:rgba(248,81,73,0.15);
+                        {% elif workout.type == 'Strength' %}background:rgba(139,92,246,0.15);
+                        {% elif workout.type == 'Cardio' %}background:rgba(26,115,232,0.15);
+                        {% elif workout.type == 'Flexibility' %}background:rgba(16,185,129,0.15);
+                        {% else %}background:rgba(245,158,11,0.15);{% endif %}">
+                <i class="fas {% if workout.type == 'HIIT' %}fa-fire" style="color:#F85149;
+                   {% elif workout.type == 'Strength' %}fa-dumbbell" style="color:#8B5CF6;
+                   {% elif workout.type == 'Cardio' %}fa-running" style="color:#1A73E8;
+                   {% elif workout.type == 'Flexibility' %}fa-spa" style="color:#10B981;
+                   {% else %}fa-star" style="color:#F59E0B;{% endif %}font-size:0.9rem;"></i>
             </div>
-            {% endfor %}
+
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                    <span style="font-weight:700;color:#E6EDF3;font-size:0.9rem;">{{ workout.name }}</span>
+                    {% if workout.is_ai_suggested %}
+                    <span style="background:rgba(139,92,246,0.15);color:#8B5CF6;font-size:0.65rem;
+                                 font-weight:700;padding:2px 8px;border-radius:8px;">
+                        <i class="fas fa-robot" style="margin-right:3px;"></i>AI
+                    </span>
+                    {% endif %}
+                    <span style="background:rgba(54,185,204,0.15);color:#36B9CC;font-size:0.68rem;
+                                 font-weight:700;padding:2px 8px;border-radius:8px;">
+                        {{ workout.type or 'General' }}
+                    </span>
+                    <span style="background:#21262D;color:#8B949E;font-size:0.68rem;
+                                 padding:2px 8px;border-radius:8px;">
+                        {{ workout.difficulty or 'N/A' }}
+                    </span>
+                    {% if workout.duration %}
+                    <span style="color:#8B949E;font-size:0.75rem;">
+                        <i class="fas fa-clock" style="margin-right:3px;"></i>{{ workout.duration }} min
+                    </span>
+                    {% endif %}
+                </div>
+                {% if workout.description %}
+                <div style="font-size:0.78rem;color:#8B949E;line-height:1.5;margin-bottom:6px;">
+                    {{ workout.description[:80] }}{% if workout.description|length > 80 %}…{% endif %}
+                </div>
+                {% endif %}
+                <!-- Trainer comments -->
+                {% for comment in workout.comments %}
+                <div style="background:rgba(26,115,232,0.08);border-left:2px solid #1A73E8;
+                            padding:6px 10px;border-radius:0 6px 6px 0;margin-top:6px;font-size:0.78rem;">
+                    <span style="color:#1A73E8;font-weight:700;">
+                        {{ comment.trainer.name if comment.trainer else 'Trainer' }}:
+                    </span>
+                    <span style="color:#C9D1D9;"> {{ comment.comment }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+                <button class="m-btn m-btn-sm"
+                        style="background:#21262D;color:#10B981;border:1px solid rgba(16,185,129,0.2);"
+                        data-toggle="modal" data-target="#logModal-{{ workout.id }}">
+                    <i class="fas fa-check"></i> Log
+                </button>
+                <a href="{{ url_for('delete_my_workout', id=workout.id) }}"
+                   class="m-btn m-btn-sm m-btn-outline-danger"
+                   onclick="return confirm('Delete this workout?')">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
         {% else %}
-        <div class="text-center text-white-50 py-3 mb-2">
-            <p class="small">No personal workouts yet.</p>
+        <div style="padding:40px;text-align:center;color:#8B949E;">
+            <i class="fas fa-dumbbell" style="font-size:2rem;display:block;margin-bottom:10px;opacity:0.2;"></i>
+            <p style="margin-bottom:12px;">No personal workouts yet.</p>
+            <button class="m-btn m-btn-info" data-toggle="modal" data-target="#addWorkoutModal">
+                <i class="fas fa-plus"></i> Add Your First
+            </button>
         </div>
         {% endif %}
+    </div>
+</div>
 
-        <!-- Assigned Workouts -->
-        <h6 class="text-white-50 mt-4 mb-3 small text-uppercase">Assigned by Trainer</h6>
+<!-- Trainer-Assigned Workouts -->
+<div class="member-card" style="margin-bottom:20px;">
+    <div class="member-card-header">
+        <i class="fas fa-user-tie" style="color:#10B981;"></i>
+        Assigned by Trainer
+        <span style="margin-left:auto;background:rgba(16,185,129,0.15);color:#10B981;
+                     padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+            {{ assigned_workouts|length }}
+        </span>
+    </div>
+    <div style="padding:0;">
         {% if assigned_workouts %}
-            {% for mw in assigned_workouts %}
-            <div class="member-list-item">
-                <div style="flex:1;">
-                    <div class="font-weight-bold text-white">{{ mw.workout.name if mw.workout else 'N/A' }}</div>
-                    <div class="text-white-50 small">
-                        <span class="badge badge-info mr-1">{{ mw.workout.type if mw.workout else '' }}</span>
-                        <span class="badge badge-secondary mr-1">{{ mw.workout.difficulty if mw.workout else '' }}</span>
-                        {% if mw.workout and mw.workout.duration %}{{ mw.workout.duration }} min{% endif %}
-                        · Assigned {{ mw.assigned_date.strftime('%d %b') if mw.assigned_date else '' }}
-                    </div>
-                    {% if mw.workout %}{% for c in mw.workout.comments %}
-                    <div style="background:rgba(16,185,129,0.1);border-left:2px solid #10B981;padding:6px 10px;
-                                border-radius:0 6px 6px 0;margin-top:6px;font-size:0.78rem;">
-                        <span style="color:#10B981;font-weight:700;">{{ c.trainer.name if c.trainer else 'Trainer' }}:</span>
-                        <span style="color:#C9D1D9;"> {{ c.comment }}</span>
-                    </div>
-                    {% endfor %}{% endif %}
-                </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <button class="btn btn-sm" style="background:#21262D;color:#10B981;font-size:0.72rem;padding:4px 8px;border-radius:6px;"
-                            data-toggle="modal" data-target="#logModal-assigned-{{ mw.id }}">
-                        <i class="fas fa-check"></i> Log
-                    </button>
-                    <span class="badge badge-success">Assigned</span>
-                </div>
+        {% for mw in assigned_workouts %}
+        <div style="display:flex;align-items:flex-start;padding:14px 18px;border-bottom:1px solid #21262D;gap:12px;">
+
+            <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;
+                        background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-clipboard-list" style="color:#10B981;font-size:0.9rem;"></i>
             </div>
-            {% endfor %}
+
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                    <span style="font-weight:700;color:#E6EDF3;font-size:0.9rem;">
+                        {{ mw.workout.name if mw.workout else 'N/A' }}
+                    </span>
+                    {% if mw.workout %}
+                    <span style="background:rgba(16,185,129,0.15);color:#10B981;font-size:0.68rem;
+                                 font-weight:700;padding:2px 8px;border-radius:8px;">
+                        {{ mw.workout.type or 'General' }}
+                    </span>
+                    <span style="background:#21262D;color:#8B949E;font-size:0.68rem;
+                                 padding:2px 8px;border-radius:8px;">
+                        {{ mw.workout.difficulty or 'N/A' }}
+                    </span>
+                    {% if mw.workout.duration %}
+                    <span style="color:#8B949E;font-size:0.75rem;">
+                        <i class="fas fa-clock" style="margin-right:3px;"></i>{{ mw.workout.duration }} min
+                    </span>
+                    {% endif %}
+                    {% endif %}
+                    <span style="color:#8B949E;font-size:0.72rem;">
+                        Assigned {{ mw.assigned_date.strftime('%d %b') if mw.assigned_date else '' }}
+                    </span>
+                </div>
+                {% if mw.workout %}
+                {% for c in mw.workout.comments %}
+                <div style="background:rgba(16,185,129,0.08);border-left:2px solid #10B981;
+                            padding:6px 10px;border-radius:0 6px 6px 0;margin-top:6px;font-size:0.78rem;">
+                    <span style="color:#10B981;font-weight:700;">{{ c.trainer.name if c.trainer else 'Trainer' }}:</span>
+                    <span style="color:#C9D1D9;"> {{ c.comment }}</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                <button class="m-btn m-btn-sm"
+                        style="background:#21262D;color:#10B981;border:1px solid rgba(16,185,129,0.2);"
+                        data-toggle="modal" data-target="#logModal-assigned-{{ mw.id }}">
+                    <i class="fas fa-check"></i> Log
+                </button>
+                <span style="background:rgba(16,185,129,0.15);color:#10B981;
+                             padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:700;">
+                    Assigned
+                </span>
+            </div>
+        </div>
+        {% endfor %}
         {% else %}
-        <div class="text-center text-white-50 py-2">
-            <p class="small">No trainer-assigned workouts yet.</p>
+        <div style="padding:40px;text-align:center;color:#8B949E;">
+            <i class="fas fa-clipboard-list" style="font-size:2rem;display:block;margin-bottom:10px;opacity:0.2;"></i>
+            <p>No trainer-assigned workouts yet.</p>
         </div>
         {% endif %}
     </div>
@@ -121,25 +217,31 @@
 
 <!-- Workout Log History -->
 {% if workout_logs %}
-<div class="member-card mb-4">
+<div class="member-card">
     <div class="member-card-header">
-        <i class="fas fa-history mr-2"></i>Recent Workout Log
+        <i class="fas fa-history" style="color:#F59E0B;"></i> Recent Workout Log
+        <span style="margin-left:auto;background:rgba(245,158,11,0.15);color:#F59E0B;
+                     padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+            {{ workout_logs|length }} entries
+        </span>
     </div>
-    <div class="member-card-body" style="padding:0;">
+    <div style="padding:0;">
         {% for log in workout_logs %}
-        <div style="display:flex;align-items:center;padding:12px 18px;border-bottom:1px solid #21262D;">
-            <div style="width:36px;height:36px;background:rgba(16,185,129,0.15);border-radius:8px;
-                        display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:12px;">
-                <i class="fas fa-check" style="color:#10B981;font-size:0.9rem;"></i>
+        <div style="display:flex;align-items:center;padding:13px 18px;border-bottom:1px solid #21262D;gap:12px;">
+            <div style="width:38px;height:38px;background:rgba(16,185,129,0.15);border-radius:10px;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-check-circle" style="color:#10B981;font-size:1rem;"></i>
             </div>
-            <div style="flex:1;">
-                <div style="font-weight:600;color:#E6EDF3;font-size:0.85rem;">{{ log.workout_name }}</div>
-                <div style="color:#8B949E;font-size:0.75rem;">
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;color:#E6EDF3;font-size:0.85rem;">{{ log.workout_name }}</div>
+                <div style="color:#8B949E;font-size:0.75rem;margin-top:2px;">
                     {{ log.completed_at.strftime('%d %b %Y') if log.completed_at else 'N/A' }}
-                    {% if log.duration_mins %} · {{ log.duration_mins }} min{% endif %}
-                    {% if log.calories_burned %} · {{ log.calories_burned }} kcal{% endif %}
+                    {% if log.duration_mins %} · <i class="fas fa-clock" style="margin-right:3px;"></i>{{ log.duration_mins }} min{% endif %}
+                    {% if log.calories_burned %} · <i class="fas fa-fire" style="color:#F85149;margin-right:3px;"></i>{{ log.calories_burned }} kcal{% endif %}
                 </div>
-                {% if log.notes %}<div style="color:#8B949E;font-size:0.73rem;">{{ log.notes }}</div>{% endif %}
+                {% if log.notes %}
+                <div style="font-size:0.75rem;color:#8B949E;font-style:italic;margin-top:2px;">{{ log.notes }}</div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -147,94 +249,96 @@
 </div>
 {% endif %}
 
-<!-- Add Workout Modal -->
+<!-- ── Add Workout Modal ── -->
 <div class="modal fade" id="addWorkoutModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
-        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
-            <div class="modal-header" style="border-bottom:1px solid #30363D;">
-                <h5 class="modal-title text-white"><i class="fas fa-plus mr-2"></i>Add Personal Workout</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus" style="color:#36B9CC;margin-right:8px;"></i>Add Personal Workout
+                </h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('add_my_workout') }}">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Workout Name *</label>
-                        <input type="text" class="form-control" name="name" required style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                        <label>Workout Name <span style="color:#F85149;">*</span></label>
+                        <input type="text" class="form-control" name="name" required placeholder="e.g. Morning HIIT">
                     </div>
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Type</label>
-                                <select class="form-control" name="type" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
-                                    <option value="HIIT">HIIT</option><option value="Strength">Strength</option>
-                                    <option value="Cardio">Cardio</option><option value="Flexibility">Flexibility</option>
-                                    <option value="General">General</option>
-                                </select>
-                            </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select class="form-control" name="type">
+                                <option value="HIIT">HIIT</option>
+                                <option value="Strength">Strength</option>
+                                <option value="Cardio">Cardio</option>
+                                <option value="Flexibility">Flexibility</option>
+                                <option value="General">General</option>
+                            </select>
                         </div>
-                        <div class="col-6">
-                            <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Difficulty</label>
-                                <select class="form-control" name="difficulty" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Advanced">Advanced</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label>Difficulty</label>
+                            <select class="form-control" name="difficulty">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Duration (minutes)</label>
-                        <input type="number" class="form-control" name="duration" min="1" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
+                        <label>Duration (minutes)</label>
+                        <input type="number" class="form-control" name="duration" min="1" placeholder="e.g. 45">
                     </div>
                     <div class="form-group">
-                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Description</label>
-                        <textarea class="form-control" name="description" rows="2" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"></textarea>
+                        <label>Description</label>
+                        <textarea class="form-control" name="description" rows="2" placeholder="Describe the workout..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid #30363D;">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save mr-1"></i> Save</button>
+                <div class="modal-footer">
+                    <button type="button" class="m-btn m-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="m-btn m-btn-info">
+                        <i class="fas fa-save"></i> Save Workout
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Log Workout Modals (personal) -->
+<!-- Log Modals — Personal Workouts -->
 {% for workout in personal_workouts %}
 <div class="modal fade" id="logModal-{{ workout.id }}" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
-        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
-            <div class="modal-header" style="border-bottom:1px solid #30363D;">
-                <h5 class="modal-title text-white"><i class="fas fa-check-circle mr-2" style="color:#10B981;"></i>Log: {{ workout.name }}</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle" style="color:#10B981;margin-right:8px;"></i>Log: {{ workout.name }}
+                </h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('log_workout') }}">
                 <input type="hidden" name="workout_id" value="{{ workout.id }}">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Duration (min)</label>
-                                <input type="number" class="form-control" name="duration_mins" value="{{ workout.duration or 30 }}" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
-                            </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div class="form-group">
+                            <label>Duration (min)</label>
+                            <input type="number" class="form-control" name="duration_mins" value="{{ workout.duration or 30 }}">
                         </div>
-                        <div class="col-6">
-                            <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Calories Burned</label>
-                                <input type="number" class="form-control" name="calories_burned" placeholder="e.g. 300" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
-                            </div>
+                        <div class="form-group">
+                            <label>Calories Burned</label>
+                            <input type="number" class="form-control" name="calories_burned" placeholder="e.g. 300">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Notes</label>
-                        <textarea class="form-control" name="notes" rows="2" placeholder="How did it go?" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"></textarea>
+                        <label>Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="How did it go?"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid #30363D;">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm" style="background:#10B981;color:#fff;"><i class="fas fa-check mr-1"></i> Log Workout</button>
+                <div class="modal-footer">
+                    <button type="button" class="m-btn m-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="m-btn m-btn-success">
+                        <i class="fas fa-check"></i> Log Workout
+                    </button>
                 </div>
             </form>
         </div>
@@ -242,40 +346,42 @@
 </div>
 {% endfor %}
 
-<!-- Log Workout Modals (assigned) -->
+<!-- Log Modals — Assigned Workouts -->
 {% for mw in assigned_workouts %}
 <div class="modal fade" id="logModal-assigned-{{ mw.id }}" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
-        <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
-            <div class="modal-header" style="border-bottom:1px solid #30363D;">
-                <h5 class="modal-title text-white"><i class="fas fa-check-circle mr-2" style="color:#10B981;"></i>Log: {{ mw.workout.name if mw.workout else 'Workout' }}</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle" style="color:#10B981;margin-right:8px;"></i>
+                    Log: {{ mw.workout.name if mw.workout else 'Workout' }}
+                </h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form method="POST" action="{{ url_for('log_workout') }}">
                 <input type="hidden" name="workout_id" value="{{ mw.workout_id }}">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Duration (min)</label>
-                                <input type="number" class="form-control" name="duration_mins" value="{{ mw.workout.duration if mw.workout else 30 }}" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
-                            </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div class="form-group">
+                            <label>Duration (min)</label>
+                            <input type="number" class="form-control" name="duration_mins"
+                                   value="{{ mw.workout.duration if mw.workout else 30 }}">
                         </div>
-                        <div class="col-6">
-                            <div class="form-group">
-                                <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Calories Burned</label>
-                                <input type="number" class="form-control" name="calories_burned" placeholder="e.g. 250" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;">
-                            </div>
+                        <div class="form-group">
+                            <label>Calories Burned</label>
+                            <input type="number" class="form-control" name="calories_burned" placeholder="e.g. 250">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Notes</label>
-                        <textarea class="form-control" name="notes" rows="2" placeholder="How did it go?" style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;"></textarea>
+                        <label>Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="How did it go?"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid #30363D;">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm" style="background:#10B981;color:#fff;"><i class="fas fa-check mr-1"></i> Log Workout</button>
+                <div class="modal-footer">
+                    <button type="button" class="m-btn m-btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="m-btn m-btn-success">
+                        <i class="fas fa-check"></i> Log Workout
+                    </button>
                 </div>
             </form>
         </div>

@@ -3,90 +3,134 @@
 
 {% block content %}
 
-<div style="margin-bottom:20px;">
-    <h4 class="text-white mb-1"><i class="fas fa-user-tie mr-2" style="color:#1A73E8;"></i>Our Trainers</h4>
-    <p class="text-white-50 small">Meet the team dedicated to your fitness journey.</p>
+<!-- Page Header -->
+<div style="margin-bottom:24px;">
+    <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
+        <i class="fas fa-user-tie" style="color:#F59E0B;margin-right:8px;"></i>Our Trainers
+    </h4>
+    <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Meet the team dedicated to your fitness journey.</p>
 </div>
 
 {% if trainers %}
-<div class="row">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;">
     {% for trainer in trainers %}
-    <div class="col-md-6 mb-4">
-        <div class="member-card">
-            <div class="member-card-body">
-                <!-- Header -->
-                <div class="d-flex align-items-center mb-3">
-                    <div style="width:56px;height:56px;border-radius:50%;
-                                background:linear-gradient(135deg,#1A73E8,#8B5CF6);
-                                display:flex;align-items:center;justify-content:center;
-                                font-size:1.4rem;font-weight:800;color:#fff;
-                                flex-shrink:0;margin-right:14px;">
-                        {{ trainer.name[0].upper() }}
+    <div style="background:#161B22;border:1px solid #30363D;border-radius:14px;overflow:hidden;
+                transition:border-color 0.2s;"
+         onmouseover="this.style.borderColor='#F59E0B'" onmouseout="this.style.borderColor='#30363D'">
+
+        <!-- Card top accent bar -->
+        <div style="height:4px;background:linear-gradient(90deg,
+            {% if loop.index % 4 == 1 %}#1A73E8,#8B5CF6
+            {% elif loop.index % 4 == 2 %}#10B981,#1A73E8
+            {% elif loop.index % 4 == 3 %}#F59E0B,#F85149
+            {% else %}#8B5CF6,#F85149{% endif %});"></div>
+
+        <div style="padding:20px;">
+            <!-- Header: avatar + name + rating -->
+            <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;">
+                <div style="width:58px;height:58px;border-radius:50%;flex-shrink:0;
+                            background:linear-gradient(135deg,
+                            {% if loop.index % 4 == 1 %}#1A73E8,#8B5CF6
+                            {% elif loop.index % 4 == 2 %}#10B981,#1A73E8
+                            {% elif loop.index % 4 == 3 %}#F59E0B,#F85149
+                            {% else %}#8B5CF6,#F85149{% endif %});
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:1.4rem;font-weight:800;color:#fff;
+                            border:3px solid rgba(255,255,255,0.1);">
+                    {{ trainer.name[0].upper() }}
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:800;color:#E6EDF3;font-size:1rem;margin-bottom:4px;">
+                        {{ trainer.name }}
                     </div>
-                    <div style="flex:1;">
-                        <div class="font-weight-bold text-white" style="font-size:1.05rem;">{{ trainer.name }}</div>
-                        <div>
-                            <span class="badge badge-primary">{{ trainer.specialization or 'General Fitness' }}</span>
-                        </div>
+                    <span style="background:rgba(26,115,232,0.15);color:#1A73E8;
+                                 padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:700;">
+                        {{ trainer.specialization or 'General Fitness' }}
+                    </span>
+                </div>
+                <!-- Rating display -->
+                <div style="text-align:right;flex-shrink:0;">
+                    {% if trainer.avg_rating %}
+                    <div style="font-size:1.1rem;font-weight:800;color:#F59E0B;">{{ trainer.avg_rating }}</div>
+                    <div style="display:flex;gap:1px;justify-content:flex-end;">
+                        {% for i in range(5) %}
+                        <i class="fas fa-star" style="font-size:0.65rem;color:{% if i < trainer.avg_rating|int %}#F59E0B{% else %}#30363D{% endif %};"></i>
+                        {% endfor %}
                     </div>
-                    <!-- Star rating display -->
-                    <div style="text-align:right;">
-                        {% if trainer.avg_rating %}
-                        <div style="font-size:1.1rem;font-weight:800;color:#F59E0B;">{{ trainer.avg_rating }}</div>
-                        <div style="font-size:0.7rem;color:#8B949E;">
-                            {% for i in range(5) %}
-                            <i class="fas fa-star" style="color:{% if i < trainer.avg_rating|int %}#F59E0B{% else %}#30363D{% endif %};font-size:0.7rem;"></i>
+                    <div style="font-size:0.65rem;color:#8B949E;margin-top:2px;">{{ trainer.ratings|length }} review{{ 's' if trainer.ratings|length != 1 }}</div>
+                    {% else %}
+                    <div style="font-size:0.72rem;color:#8B949E;">Not yet rated</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bio -->
+            {% if trainer.bio %}
+            <p style="font-size:0.82rem;color:#8B949E;margin-bottom:14px;line-height:1.6;
+                       border-left:2px solid #30363D;padding-left:10px;">
+                {{ trainer.bio[:100] }}{% if trainer.bio|length > 100 %}…{% endif %}
+            </p>
+            {% endif %}
+
+            <!-- Contact info -->
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+                {% if trainer.email %}
+                <div style="font-size:0.8rem;color:#8B949E;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-envelope" style="color:#1A73E8;width:14px;"></i>
+                    {{ trainer.email }}
+                </div>
+                {% endif %}
+                {% if trainer.phone %}
+                <div style="font-size:0.8rem;color:#8B949E;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-phone" style="color:#10B981;width:14px;"></i>
+                    {{ trainer.phone }}
+                </div>
+                {% endif %}
+                <div style="font-size:0.8rem;color:#8B949E;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chalkboard-teacher" style="color:#F59E0B;width:14px;"></i>
+                    {{ trainer.classes|length }} class{{ 'es' if trainer.classes|length != 1 }} running
+                </div>
+            </div>
+
+            <!-- Recent reviews -->
+            {% if trainer.ratings %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:0.68rem;font-weight:800;color:rgba(255,255,255,0.3);
+                            text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Recent Reviews</div>
+                {% for rating in trainer.ratings[:2] %}
+                <div style="background:#0D1117;border-radius:8px;padding:10px 12px;margin-bottom:6px;
+                             border:1px solid #21262D;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                        <span style="color:#C9D1D9;font-weight:700;font-size:0.78rem;">
+                            {{ rating.member.name if rating.member else 'Member' }}
+                        </span>
+                        <div style="display:flex;gap:2px;">
+                            {% for i in range(rating.rating) %}
+                            <i class="fas fa-star" style="color:#F59E0B;font-size:0.65rem;"></i>
                             {% endfor %}
                         </div>
-                        <div style="font-size:0.65rem;color:#8B949E;">{{ trainer.ratings|length }} review(s)</div>
-                        {% else %}
-                        <div style="font-size:0.72rem;color:#8B949E;">Not yet rated</div>
-                        {% endif %}
                     </div>
-                </div>
-
-                {% if trainer.bio %}
-                <p class="text-white-50 small mb-3">{{ trainer.bio }}</p>
-                {% endif %}
-
-                <div class="text-white-50 small mb-3">
-                    {% if trainer.email %}
-                    <div class="mb-1"><i class="fas fa-envelope mr-2" style="color:#1A73E8;"></i>{{ trainer.email }}</div>
-                    {% endif %}
-                    {% if trainer.phone %}
-                    <div class="mb-1"><i class="fas fa-phone mr-2" style="color:#10B981;"></i>{{ trainer.phone }}</div>
-                    {% endif %}
-                    <div><i class="fas fa-dumbbell mr-2" style="color:#F59E0B;"></i>{{ trainer.classes|length }} class(es) running</div>
-                </div>
-
-                <!-- Recent reviews -->
-                {% if trainer.ratings %}
-                <div style="margin-bottom:12px;">
-                    {% for rating in trainer.ratings[:2] %}
-                    <div style="background:#0D1117;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:0.78rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-                            <span style="color:#C9D1D9;font-weight:600;">{{ rating.member.name if rating.member else 'Member' }}</span>
-                            <span style="color:#F59E0B;">
-                                {% for i in range(rating.rating) %}<i class="fas fa-star" style="font-size:0.65rem;"></i>{% endfor %}
-                            </span>
-                        </div>
-                        {% if rating.review %}<div style="color:#8B949E;">{{ rating.review[:60] }}{% if rating.review|length > 60 %}…{% endif %}</div>{% endif %}
+                    {% if rating.review %}
+                    <div style="font-size:0.78rem;color:#8B949E;line-height:1.5;">
+                        {{ rating.review[:70] }}{% if rating.review|length > 70 %}…{% endif %}
                     </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
-                {% endif %}
-
-                <!-- Rate trainer button -->
-                {% if member %}
-                <button class="btn btn-sm btn-block"
-                        style="background:#21262D;color:#F59E0B;border:1px solid #30363D;border-radius:8px;font-weight:600;"
-                        data-toggle="modal" data-target="#rateModal-{{ trainer.id }}">
-                    <i class="fas fa-star mr-1"></i>
-                    {% set existing = trainer.ratings|selectattr('member_id','eq',member.id)|list %}
-                    {% if existing %}Edit My Rating{% else %}Rate This Trainer{% endif %}
-                </button>
-                {% endif %}
+                {% endfor %}
             </div>
+            {% endif %}
+
+            <!-- Rate button (members only) -->
+            {% if member %}
+            {% set existing = trainer.ratings|selectattr('member_id','eq',member.id)|list %}
+            <button class="m-btn" data-toggle="modal" data-target="#rateModal-{{ trainer.id }}"
+                    style="width:100%;justify-content:center;
+                           background:rgba(245,158,11,0.1);color:#F59E0B;
+                           border:1px solid rgba(245,158,11,0.25);font-weight:700;">
+                <i class="fas fa-star"></i>
+                {% if existing %}Edit My Rating{% else %}Rate This Trainer{% endif %}
+            </button>
+            {% endif %}
         </div>
     </div>
 
@@ -94,40 +138,51 @@
     {% if member %}
     <div class="modal fade" id="rateModal-{{ trainer.id }}" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
-            <div class="modal-content" style="background:#161B22;border:1px solid #30363D;">
-                <div class="modal-header" style="border-bottom:1px solid #30363D;">
-                    <h5 class="modal-title text-white">
-                        <i class="fas fa-star mr-2" style="color:#F59E0B;"></i>Rate {{ trainer.name }}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-star" style="color:#F59E0B;margin-right:8px;"></i>Rate {{ trainer.name }}
                     </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <form method="POST" action="{{ url_for('rate_trainer', trainer_id=trainer.id) }}">
                     <div class="modal-body">
+                        <!-- Star picker -->
                         <div class="form-group">
-                            <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Rating *</label>
-                            <div style="display:flex;gap:8px;margin-top:6px;">
+                            <label>Your Rating <span style="color:#F85149;">*</span></label>
+                            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
                                 {% for i in range(1,6) %}
-                                <label style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                                <label style="cursor:pointer;display:flex;flex-direction:column;
+                                              align-items:center;gap:4px;padding:10px 14px;
+                                              background:#0D1117;border:1px solid #30363D;border-radius:10px;
+                                              transition:all 0.2s;"
+                                       onmouseover="this.style.borderColor='#F59E0B'"
+                                       onmouseout="this.style.borderColor='#30363D'">
                                     <input type="radio" name="rating" value="{{ i }}"
                                            {% if loop.last %}checked{% endif %}
-                                           style="accent-color:#F59E0B;">
-                                    <span style="font-size:1.2rem;">{% for j in range(i) %}⭐{% endfor %}</span>
-                                    <span style="color:#8B949E;font-size:0.68rem;">{{ i }}</span>
+                                           style="accent-color:#F59E0B;margin-bottom:4px;">
+                                    <div style="display:flex;gap:2px;">
+                                        {% for j in range(i) %}
+                                        <i class="fas fa-star" style="color:#F59E0B;font-size:0.75rem;"></i>
+                                        {% endfor %}
+                                    </div>
+                                    <span style="font-size:0.7rem;color:#8B949E;font-weight:700;">{{ i }}/5</span>
                                 </label>
                                 {% endfor %}
                             </div>
                         </div>
                         <div class="form-group">
-                            <label style="color:#8B949E;font-size:0.82rem;font-weight:600;">Review (optional)</label>
+                            <label>Review (optional)</label>
                             <textarea class="form-control" name="review" rows="3"
-                                      placeholder="Share your experience..."
-                                      style="background:#0D1117;border:1px solid #30363D;color:#E6EDF3;border-radius:8px;"></textarea>
+                                      placeholder="Share your experience with this trainer..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer" style="border-top:1px solid #30363D;">
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-sm" style="background:#F59E0B;color:#000;font-weight:600;">
-                            <i class="fas fa-paper-plane mr-1"></i> Submit Rating
+                    <div class="modal-footer">
+                        <button type="button" class="m-btn m-btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" style="background:#F59E0B;color:#000;padding:9px 20px;
+                                border-radius:8px;border:none;font-weight:700;cursor:pointer;
+                                font-size:0.85rem;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-paper-plane"></i> Submit Rating
                         </button>
                     </div>
                 </form>
@@ -135,13 +190,16 @@
         </div>
     </div>
     {% endif %}
+
     {% endfor %}
 </div>
+
 {% else %}
 <div class="member-card">
-    <div class="member-card-body text-center text-white-50 py-4">
-        <i class="fas fa-user-slash fa-2x mb-2"></i>
-        <p>No trainers available yet.</p>
+    <div class="member-card-body" style="text-align:center;padding:60px;">
+        <i class="fas fa-user-slash" style="font-size:2.5rem;display:block;margin-bottom:14px;opacity:0.2;color:#F59E0B;"></i>
+        <p style="color:#8B949E;margin-bottom:6px;">No trainers available yet.</p>
+        <p style="font-size:0.82rem;color:#8B949E;">Check back soon — our team is growing!</p>
     </div>
 </div>
 {% endif %}

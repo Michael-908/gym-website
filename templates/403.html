@@ -5,29 +5,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>403 - Access Denied</title>
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0D1117;
+            color: #E6EDF3;
+            font-family: 'Nunito', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .error-wrapper {
+            width: 100%;
+            max-width: 520px;
+            text-align: center;
+        }
+
+        /* Animated lock icon */
+        .lock-container {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(248,81,73,0.1);
+            border: 2px solid rgba(248,81,73,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 28px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(248,81,73,0.2); }
+            70%  { box-shadow: 0 0 0 20px rgba(248,81,73,0); }
+            100% { box-shadow: 0 0 0 0 rgba(248,81,73,0); }
+        }
+
+        /* Big 403 number */
+        .error-code {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #F85149;
+            line-height: 1;
+            margin-bottom: 12px;
+            letter-spacing: -2px;
+        }
+
+        .error-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #E6EDF3;
+            margin-bottom: 10px;
+        }
+
+        .error-desc {
+            font-size: 0.875rem;
+            color: #8B949E;
+            line-height: 1.7;
+            margin-bottom: 28px;
+            max-width: 380px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Role pill — shown when user is logged in */
+        .role-context {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161B22;
+            border: 1px solid #30363D;
+            border-radius: 20px;
+            padding: 7px 16px;
+            font-size: 0.78rem;
+            color: #8B949E;
+            margin-bottom: 28px;
+        }
+        .role-context .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #10B981; flex-shrink: 0;
+        }
+
+        /* Action buttons */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 22px; border-radius: 9px; border: none;
+            font-size: 0.875rem; font-weight: 700; cursor: pointer;
+            text-decoration: none; transition: all 0.2s; font-family: 'Nunito', sans-serif;
+        }
+        .btn-primary   { background: #1A73E8; color: #fff; }
+        .btn-primary:hover { background: #1557B0; color: #fff; text-decoration: none; }
+        .btn-secondary { background: #21262D; color: #E6EDF3; border: 1px solid #30363D; }
+        .btn-secondary:hover { background: #30363D; color: #E6EDF3; text-decoration: none; }
+
+        /* Info box — multi-tab note -->
+        .info-box {
+            background: #161B22;
+            border: 1px solid #30363D;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-top: 28px;
+            font-size: 0.78rem;
+            color: #8B949E;
+            text-align: left;
+            line-height: 1.6;
+        }
+        .info-box strong { color: #C9D1D9; }
+        .info-box .info-icon {
+            color: #1A73E8; margin-right: 6px;
+        }
+
+        /* Divider */
+        .divider {
+            border: none;
+            border-top: 1px solid #21262D;
+            margin: 24px 0;
+        }
+    </style>
 </head>
-<body class="bg-gradient-primary">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-xl-10 col-lg-12 col-md-9">
-                <div class="card o-hidden border-0 shadow-lg my-5">
-                    <div class="card-body p-0">
-                        <div class="p-5 text-center">
-                            <div class="text-primary mb-4">
-                                <i class="fas fa-lock fa-5x"></i>
-                            </div>
-                            <h1 class="h1 text-gray-900 mb-4">403</h1>
-                            <h4 class="text-gray-800 mb-4">Access Denied</h4>
-                            <p class="text-gray-500 mb-4">You do not have permission to access this page.</p>
-                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
-                                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<body>
+    <div class="error-wrapper">
+
+        <!-- Lock icon -->
+        <div class="lock-container">
+            <i class="fas fa-lock" style="font-size:2.2rem;color:#F85149;"></i>
         </div>
+
+        <!-- Error code -->
+        <div class="error-code">403</div>
+        <div class="error-title">Access Denied</div>
+        <p class="error-desc">
+            You don't have permission to access this page.
+            This area is restricted to a different role.
+        </p>
+
+        <!-- Show current role if logged in -->
+        {% if current_user and current_user.is_authenticated %}
+        <div class="role-context">
+            <span class="dot"></span>
+            Logged in as <strong style="color:#E6EDF3;margin:0 4px;">{{ current_user.username }}</strong>
+            <span style="background:rgba(26,115,232,0.15);color:#1A73E8;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;">
+                {{ current_user.role|capitalize }}
+            </span>
+        </div>
+        {% endif %}
+
+        <!-- Navigation buttons -->
+        <div class="btn-row">
+            {% if current_user and current_user.is_authenticated %}
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+                </a>
+                {% elif current_user.role == 'trainer' %}
+                <a href="{{ url_for('trainer_dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-tachometer-alt"></i> Trainer Dashboard
+                </a>
+                {% else %}
+                <a href="{{ url_for('member_dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-home"></i> My Dashboard
+                </a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i> Switch Account
+                </a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Multi-tab note -->
+        {% if current_user and current_user.is_authenticated %}
+        <div class="info-box">
+            <i class="fas fa-info-circle info-icon"></i>
+            <strong>Using multiple accounts?</strong> Browser sessions are shared across tabs.
+            To use different accounts simultaneously, open a separate
+            <strong>incognito / private window</strong> for each account.
+        </div>
+        {% endif %}
+
     </div>
 </body>
 </html>

@@ -14,36 +14,31 @@
         <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
             <i class="fas fa-cog" style="color:#8B949E;margin-right:8px;"></i>Settings
         </h4>
-        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Manage your account, password and preferences.</p>
+        <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Manage your account and security preferences.</p>
     </div>
-    {% if current_user.role == 'member' %}
-    <a href="{{ url_for('member_dashboard') }}" class="m-btn m-btn-secondary">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-    {% endif %}
 </div>
 
 {% if current_user.role == 'member' %}
+<!-- ══════════════════ MEMBER SETTINGS ══════════════════ -->
 
-<!-- ═══════════════════════════ MEMBER SETTINGS ═══════════════════════════ -->
-
-<!-- Member Profile Banner -->
+<!-- Profile Banner -->
 <div style="background:linear-gradient(135deg,#1A73E8 0%,#0D47A1 100%);
             border-radius:12px;padding:22px;margin-bottom:24px;
             display:flex;align-items:center;gap:16px;">
-    <div style="width:56px;height:56px;border-radius:50%;
+    <div style="width:58px;height:58px;border-radius:50%;
                 border:3px solid rgba(255,255,255,0.3);
                 background:rgba(255,255,255,0.15);
                 display:flex;align-items:center;justify-content:center;
                 font-size:1.5rem;font-weight:800;color:#fff;flex-shrink:0;">
         {{ current_user.username[0].upper() }}
     </div>
-    <div>
+    <div style="flex:1;">
         <div style="font-size:1.1rem;font-weight:800;color:#fff;">{{ current_user.username }}</div>
         <div style="font-size:0.82rem;color:rgba(255,255,255,0.65);">{{ current_user.email }}</div>
-        <div style="margin-top:6px;">
-            <span class="m-badge m-badge-primary">Member</span>
-            <span style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-left:8px;">
+        <div style="margin-top:6px;display:flex;align-items:center;gap:10px;">
+            <span style="background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;
+                         border-radius:20px;font-size:0.72rem;font-weight:700;">Member</span>
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.5);">
                 Joined {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}
             </span>
         </div>
@@ -53,11 +48,11 @@
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
     <!-- Change Password -->
-    <div class="m-card">
-        <div class="m-card-header">
-            <span><i class="fas fa-lock" style="margin-right:8px;color:#F85149;"></i>Change Password</span>
+    <div class="member-card">
+        <div class="member-card-header">
+            <i class="fas fa-lock" style="color:#F85149;"></i> Change Password
         </div>
-        <div class="m-card-body">
+        <div class="member-card-body">
             <form method="POST" action="{{ url_for('change_password') }}">
                 <div class="form-group">
                     <label>Current Password <span style="color:#F85149;">*</span></label>
@@ -84,29 +79,34 @@
     <!-- Right column -->
     <div style="display:flex;flex-direction:column;gap:20px;">
 
-        <!-- Account Information -->
-        <div class="m-card">
-            <div class="m-card-header">
-                <span><i class="fas fa-user" style="margin-right:8px;color:#1A73E8;"></i>Account Information</span>
+        <!-- Account Info -->
+        <div class="member-card">
+            <div class="member-card-header">
+                <i class="fas fa-user" style="color:#1A73E8;"></i> Account Information
             </div>
             <div style="padding:0;">
-                <table class="m-table">
+                <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
                     <tbody>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;width:42%;">Username</td>
-                            <td style="color:#E6EDF3;font-weight:600;">{{ current_user.username }}</td>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;width:42%;">Username</td>
+                            <td style="padding:11px 18px;color:#E6EDF3;font-weight:600;">{{ current_user.username }}</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Email</td>
+                            <td style="padding:11px 18px;color:#C9D1D9;">{{ current_user.email }}</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Role</td>
+                            <td style="padding:11px 18px;">
+                                <span style="background:rgba(26,115,232,0.15);color:#1A73E8;
+                                             padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                                    Member
+                                </span>
+                            </td>
                         </tr>
                         <tr>
-                            <td style="color:#8B949E;font-weight:600;">Email</td>
-                            <td style="color:#C9D1D9;">{{ current_user.email }}</td>
-                        </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Role</td>
-                            <td><span class="m-badge m-badge-primary">Member</span></td>
-                        </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Member Since</td>
-                            <td style="color:#C9D1D9;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Member Since</td>
+                            <td style="padding:11px 18px;color:#C9D1D9;">
                                 {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}
                             </td>
                         </tr>
@@ -116,11 +116,11 @@
         </div>
 
         <!-- Quick Links -->
-        <div class="m-card">
-            <div class="m-card-header">
-                <span><i class="fas fa-link" style="margin-right:8px;color:#10B981;"></i>Quick Links</span>
+        <div class="member-card">
+            <div class="member-card-header">
+                <i class="fas fa-link" style="color:#10B981;"></i> Quick Links
             </div>
-            <div class="m-card-body" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="member-card-body" style="display:flex;flex-direction:column;gap:8px;">
                 <a href="{{ url_for('my_workouts') }}" class="m-btn m-btn-secondary" style="justify-content:flex-start;">
                     <i class="fas fa-running" style="color:#1A73E8;width:18px;"></i> My Workouts
                 </a>
@@ -135,53 +135,92 @@
                 </a>
                 <a href="{{ url_for('logout') }}"
                    style="display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;
-                          background:rgba(248,81,73,0.1);color:#F85149;text-decoration:none;
+                          background:rgba(248,81,73,0.08);color:#F85149;text-decoration:none;
                           font-size:0.82rem;font-weight:600;border:1px solid rgba(248,81,73,0.2);
                           transition:all 0.2s;"
-                   onmouseover="this.style.background='rgba(248,81,73,0.2)'"
-                   onmouseout="this.style.background='rgba(248,81,73,0.1)'">
+                   onmouseover="this.style.background='rgba(248,81,73,0.15)'"
+                   onmouseout="this.style.background='rgba(248,81,73,0.08)'">
                     <i class="fas fa-sign-out-alt" style="width:18px;"></i> Logout
                 </a>
             </div>
         </div>
 
         <!-- System Info -->
-        <div class="m-card">
-            <div class="m-card-header">
-                <span><i class="fas fa-info-circle" style="margin-right:8px;color:#8B949E;"></i>System Information</span>
+        <div class="member-card">
+            <div class="member-card-header">
+                <i class="fas fa-info-circle" style="color:#8B949E;"></i> System Information
             </div>
             <div style="padding:0;">
-                <table class="m-table">
+                <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
                     <tbody>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;width:42%;">System</td>
-                            <td style="color:#E6EDF3;">Gym Management System</td>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;width:42%;">System</td>
+                            <td style="padding:11px 18px;color:#E6EDF3;">Gym Management System</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Version</td>
+                            <td style="padding:11px 18px;color:#C9D1D9;">1.0.0</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Database</td>
+                            <td style="padding:11px 18px;">
+                                <span style="background:rgba(139,148,158,0.15);color:#8B949E;
+                                             padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                                    SQLite
+                                </span>
+                            </td>
                         </tr>
                         <tr>
-                            <td style="color:#8B949E;font-weight:600;">Version</td>
-                            <td style="color:#C9D1D9;">1.0.0</td>
-                        </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Database</td>
-                            <td><span class="m-badge m-badge-secondary">SQLite</span></td>
-                        </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Framework</td>
-                            <td><span class="m-badge m-badge-primary">Flask</span></td>
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Framework</td>
+                            <td style="padding:11px 18px;">
+                                <span style="background:rgba(26,115,232,0.15);color:#1A73E8;
+                                             padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                                    Flask
+                                </span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-    </div><!-- end right column -->
-</div><!-- end grid -->
+    </div>
+</div>
 
 {% else %}
+<!-- ══════════════════ ADMIN / TRAINER SETTINGS ══════════════════ -->
 
-<!-- ═══════════════════════ ADMIN / TRAINER SETTINGS ═══════════════════════ -->
+<!-- Profile Banner -->
+<div style="background:{% if current_user.role == 'admin' %}linear-gradient(135deg,#F59E0B 0%,#D97706 100%){% else %}linear-gradient(135deg,#1A73E8 0%,#0D47A1 100%){% endif %};
+            border-radius:12px;padding:22px;margin-bottom:24px;
+            display:flex;align-items:center;gap:16px;">
+    <div style="width:58px;height:58px;border-radius:50%;
+                border:3px solid rgba(255,255,255,0.3);
+                background:rgba(255,255,255,0.15);
+                display:flex;align-items:center;justify-content:center;
+                font-size:1.5rem;font-weight:800;color:#fff;flex-shrink:0;">
+        {{ current_user.username[0].upper() }}
+    </div>
+    <div>
+        <div style="font-size:1.1rem;font-weight:800;color:#fff;">{{ current_user.username }}</div>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.65);">{{ current_user.email }}</div>
+        <div style="margin-top:6px;">
+            {% if current_user.role == 'admin' %}
+            <span style="background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;
+                         border-radius:20px;font-size:0.72rem;font-weight:700;">
+                <i class="fas fa-shield-alt" style="margin-right:4px;"></i>Admin
+            </span>
+            {% else %}
+            <span style="background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;
+                         border-radius:20px;font-size:0.72rem;font-weight:700;">
+                <i class="fas fa-user-tie" style="margin-right:4px;"></i>Trainer
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
-<div class="t-grid-2">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
     <!-- Change Password -->
     <div class="t-card">
@@ -220,30 +259,36 @@
             <div class="t-card-header">
                 <span><i class="fas fa-user" style="margin-right:8px;color:#1A73E8;"></i>Account Information</span>
             </div>
-            <div class="t-card-body" style="padding:0;">
-                <table class="t-table">
+            <div style="padding:0;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
                     <tbody>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;width:40%;">Username</td>
-                            <td style="color:#E6EDF3;">{{ current_user.username }}</td>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;width:40%;">Username</td>
+                            <td style="padding:11px 18px;color:#E6EDF3;font-weight:600;">{{ current_user.username }}</td>
                         </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Email</td>
-                            <td style="color:#E6EDF3;">{{ current_user.email }}</td>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Email</td>
+                            <td style="padding:11px 18px;color:#C9D1D9;">{{ current_user.email }}</td>
                         </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Role</td>
-                            <td>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Role</td>
+                            <td style="padding:11px 18px;">
                                 {% if current_user.role == 'admin' %}
-                                    <span class="t-badge t-badge-warning">Admin</span>
-                                {% elif current_user.role == 'trainer' %}
-                                    <span class="t-badge t-badge-info">Trainer</span>
+                                <span style="background:rgba(245,158,11,0.15);color:#F59E0B;
+                                             padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                                    Admin
+                                </span>
+                                {% else %}
+                                <span style="background:rgba(54,185,204,0.15);color:#36B9CC;
+                                             padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                                    Trainer
+                                </span>
                                 {% endif %}
                             </td>
                         </tr>
                         <tr>
-                            <td style="color:#8B949E;font-weight:600;">Member Since</td>
-                            <td style="color:#C9D1D9;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Member Since</td>
+                            <td style="padding:11px 18px;color:#C9D1D9;">
                                 {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}
                             </td>
                         </tr>
@@ -257,32 +302,57 @@
             <div class="t-card-header">
                 <span><i class="fas fa-dumbbell" style="margin-right:8px;color:#10B981;"></i>System Information</span>
             </div>
-            <div class="t-card-body" style="padding:0;">
-                <table class="t-table">
+            <div style="padding:0;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
                     <tbody>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;width:40%;">System</td>
-                            <td style="color:#E6EDF3;">Gym Management System</td>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;width:40%;">System</td>
+                            <td style="padding:11px 18px;color:#E6EDF3;">Gym Management System</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Version</td>
+                            <td style="padding:11px 18px;color:#C9D1D9;">1.0.0</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #21262D;">
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Database</td>
+                            <td style="padding:11px 18px;">
+                                <span class="t-badge t-badge-secondary">SQLite</span>
+                            </td>
                         </tr>
                         <tr>
-                            <td style="color:#8B949E;font-weight:600;">Version</td>
-                            <td style="color:#E6EDF3;">1.0.0</td>
-                        </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Database</td>
-                            <td><span class="t-badge t-badge-secondary">SQLite</span></td>
-                        </tr>
-                        <tr>
-                            <td style="color:#8B949E;font-weight:600;">Framework</td>
-                            <td><span class="t-badge t-badge-primary">Flask</span></td>
+                            <td style="padding:11px 18px;color:#8B949E;font-weight:600;">Framework</td>
+                            <td style="padding:11px 18px;">
+                                <span class="t-badge t-badge-primary">Flask</span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-    </div><!-- end right column -->
-</div><!-- end t-grid-2 -->
+        <!-- Danger zone — quick logout -->
+        <div class="t-card" style="border-color:rgba(248,81,73,0.2);">
+            <div class="t-card-header" style="background:rgba(248,81,73,0.05);">
+                <span><i class="fas fa-exclamation-triangle" style="margin-right:8px;color:#F85149;"></i>Session</span>
+            </div>
+            <div class="t-card-body">
+                <p style="color:#8B949E;font-size:0.82rem;margin-bottom:14px;line-height:1.6;">
+                    Logging out will end your current session. You will need to sign in again to access the system.
+                </p>
+                <a href="{{ url_for('logout') }}"
+                   style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;
+                          border-radius:8px;background:rgba(248,81,73,0.1);color:#F85149;
+                          text-decoration:none;font-size:0.85rem;font-weight:700;
+                          border:1px solid rgba(248,81,73,0.25);transition:all 0.2s;"
+                   onmouseover="this.style.background='rgba(248,81,73,0.2)'"
+                   onmouseout="this.style.background='rgba(248,81,73,0.1)'">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 {% endif %}
 

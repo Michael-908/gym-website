@@ -3,6 +3,7 @@
 
 {% block content %}
 
+<!-- Page Header -->
 <div style="margin-bottom:24px;">
     <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
         <i class="fas fa-apple-alt" style="color:#F59E0B;margin-right:8px;"></i>My Nutrition Plans
@@ -12,67 +13,110 @@
 
 {% if plans %}
 
-<!-- Plans Grid -->
 {% for plan in plans %}
-<div class="m-card" style="margin-bottom:20px;">
-    <div class="m-card-header">
+<div class="member-card" style="margin-bottom:20px;">
+
+    <!-- Card Header -->
+    <div class="member-card-header" style="justify-content:space-between;">
         <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:38px;height:38px;border-radius:10px;background:rgba(245,158,11,0.15);
-                        display:flex;align-items:center;justify-content:center;">
-                <i class="fas fa-utensils" style="color:#F59E0B;"></i>
+            <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;
+                        background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-utensils" style="color:#F59E0B;font-size:0.95rem;"></i>
             </div>
             <div>
-                <span style="font-weight:700;color:#E6EDF3;">{{ plan.meal_plan }}</span>
+                <div style="font-weight:700;color:#E6EDF3;">{{ plan.meal_plan }}</div>
                 <div style="font-size:0.75rem;color:#8B949E;margin-top:2px;">
                     Assigned {{ plan.date.strftime('%d %b %Y') if plan.date else 'N/A' }}
                 </div>
             </div>
         </div>
+        <!-- Plan badge -->
         {% set plan_colors = {
-            'Weight Loss Plan': 'info',
-            'Muscle Gain Plan': 'danger',
-            'Maintenance Plan': 'success',
-            'High Protein Plan': 'warning',
-            'Low Carb Plan': 'secondary'
+            'Weight Loss Plan':  ('#36B9CC',  'rgba(54,185,204,0.15)'),
+            'Muscle Gain Plan':  ('#F85149',  'rgba(248,81,73,0.15)'),
+            'Maintenance Plan':  ('#10B981',  'rgba(16,185,129,0.15)'),
+            'High Protein Plan': ('#F59E0B',  'rgba(245,158,11,0.15)'),
+            'Low Carb Plan':     ('#8B949E',  'rgba(139,148,158,0.15)')
         } %}
-        <span class="m-badge m-badge-{{ plan_colors.get(plan.meal_plan, 'primary') }}">{{ plan.meal_plan }}</span>
+        {% set pcolor = plan_colors.get(plan.meal_plan, ('#1A73E8','rgba(26,115,232,0.15)')) %}
+        <span style="color:{{ pcolor[0] }};background:{{ pcolor[1] }};
+                     padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+            {{ plan.meal_plan }}
+        </span>
     </div>
-    <div class="m-card-body">
+
+    <div class="member-card-body">
+
         <!-- Macro Stats -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
-            <div style="background:#21262D;border-radius:10px;padding:16px;text-align:center;">
+            <div style="background:#0D1117;border:1px solid #30363D;border-radius:12px;
+                        padding:18px;text-align:center;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F59E0B,#F85149);"></div>
                 <div style="font-size:2rem;font-weight:800;color:#F59E0B;">{{ plan.calories }}</div>
-                <div style="font-size:0.75rem;color:#8B949E;text-transform:uppercase;letter-spacing:1px;">Daily Calories</div>
+                <div style="font-size:0.7rem;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">
+                    <i class="fas fa-fire" style="margin-right:4px;"></i>Daily Calories
+                </div>
             </div>
-            <div style="background:#21262D;border-radius:10px;padding:16px;text-align:center;">
-                <div style="font-size:2rem;font-weight:800;color:#10B981;">{{ plan.protein }}<span style="font-size:1rem;">g</span></div>
-                <div style="font-size:0.75rem;color:#8B949E;text-transform:uppercase;letter-spacing:1px;">Daily Protein</div>
+            <div style="background:#0D1117;border:1px solid #30363D;border-radius:12px;
+                        padding:18px;text-align:center;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#10B981,#1A73E8);"></div>
+                <div style="font-size:2rem;font-weight:800;color:#10B981;">
+                    {{ plan.protein }}<span style="font-size:1rem;">g</span>
+                </div>
+                <div style="font-size:0.7rem;color:#8B949E;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">
+                    <i class="fas fa-drumstick-bite" style="margin-right:4px;"></i>Daily Protein
+                </div>
             </div>
         </div>
 
-        {% if plan.schedule %}
-        <div style="background:#21262D;border-radius:8px;padding:14px;margin-bottom:16px;">
-            <div style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.3);
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
-                Meal Schedule
+        <!-- Macro bar visualisation -->
+        <div style="margin-bottom:18px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#8B949E;margin-bottom:6px;">
+                <span>Nutritional Breakdown (estimated)</span>
             </div>
-            <div style="font-size:0.875rem;color:#C9D1D9;line-height:1.6;">{{ plan.schedule }}</div>
+            {% set protein_cal = plan.protein * 4 %}
+            {% set protein_pct = ((protein_cal / plan.calories) * 100)|int if plan.calories > 0 else 30 %}
+            {% set fat_pct = 30 %}
+            {% set carb_pct = 100 - protein_pct - fat_pct %}
+            <div style="height:8px;background:#21262D;border-radius:4px;overflow:hidden;display:flex;">
+                <div style="width:{{ protein_pct }}%;background:#10B981;" title="Protein {{ protein_pct }}%"></div>
+                <div style="width:{{ carb_pct if carb_pct > 0 else 0 }}%;background:#1A73E8;" title="Carbs"></div>
+                <div style="width:{{ fat_pct }}%;background:#F59E0B;" title="Fats {{ fat_pct }}%"></div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:6px;font-size:0.72rem;color:#8B949E;">
+                <span><span style="color:#10B981;">■</span> Protein {{ protein_pct }}%</span>
+                <span><span style="color:#1A73E8;">■</span> Carbs ~{{ carb_pct if carb_pct > 0 else 0 }}%</span>
+                <span><span style="color:#F59E0B;">■</span> Fats ~{{ fat_pct }}%</span>
+            </div>
+        </div>
+
+        <!-- Meal Schedule -->
+        {% if plan.schedule %}
+        <div style="background:#0D1117;border:1px solid #30363D;border-radius:10px;
+                    padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:0.7rem;font-weight:800;color:rgba(255,255,255,0.3);
+                        text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+                <i class="fas fa-calendar-alt" style="margin-right:6px;color:#F59E0B;"></i>Meal Schedule
+            </div>
+            <div style="font-size:0.875rem;color:#C9D1D9;line-height:1.7;">{{ plan.schedule }}</div>
         </div>
         {% endif %}
 
         <!-- Trainer Comments -->
         {% if plan.comments %}
         <div>
-            <div style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.3);
+            <div style="font-size:0.7rem;font-weight:800;color:rgba(255,255,255,0.3);
                         text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-                Trainer Comments
+                <i class="fas fa-comment" style="margin-right:6px;color:#F59E0B;"></i>Trainer Comments
             </div>
             {% for comment in plan.comments %}
-            <div style="background:#161B22;border-left:3px solid #F59E0B;
-                        border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:8px;">
+            <div style="background:#0D1117;border-left:3px solid #F59E0B;border-radius:0 8px 8px 0;
+                        padding:12px 16px;margin-bottom:10px;border:1px solid #21262D;border-left:3px solid #F59E0B;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    <div class="m-avatar" style="width:28px;height:28px;font-size:0.72rem;
-                                background:linear-gradient(135deg,#F59E0B,#D97706);">
+                    <div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;
+                                background:linear-gradient(135deg,#F59E0B,#D97706);
+                                display:flex;align-items:center;justify-content:center;
+                                font-size:0.72rem;font-weight:800;color:#fff;">
                         {{ comment.trainer.name[0].upper() if comment.trainer else 'T' }}
                     </div>
                     <div>
@@ -84,21 +128,31 @@
                         </div>
                     </div>
                 </div>
-                <div style="font-size:0.875rem;color:#C9D1D9;">{{ comment.comment }}</div>
+                <div style="font-size:0.875rem;color:#C9D1D9;line-height:1.6;">{{ comment.comment }}</div>
             </div>
             {% endfor %}
         </div>
         {% endif %}
+
     </div>
 </div>
 {% endfor %}
 
 {% else %}
-<div class="m-card">
-    <div style="padding:60px;text-align:center;color:#8B949E;">
-        <i class="fas fa-utensils" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
-        <p style="margin-bottom:6px;">No nutrition plans assigned yet.</p>
-        <p style="font-size:0.82rem;">Contact your trainer to get a meal plan tailored to your goals.</p>
+<!-- Empty state -->
+<div class="member-card">
+    <div class="member-card-body" style="text-align:center;padding:60px 30px;">
+        <div style="width:70px;height:70px;border-radius:50%;background:rgba(245,158,11,0.1);
+                    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="fas fa-utensils" style="font-size:1.8rem;color:#F59E0B;opacity:0.5;"></i>
+        </div>
+        <p style="color:#E6EDF3;font-weight:700;font-size:0.95rem;margin-bottom:8px;">No Nutrition Plans Yet</p>
+        <p style="color:#8B949E;font-size:0.82rem;line-height:1.6;max-width:340px;margin:0 auto 20px;">
+            Contact your trainer to get a personalised meal plan tailored to your fitness goals.
+        </p>
+        <a href="{{ url_for('trainer_profiles') }}" class="m-btn m-btn-warning">
+            <i class="fas fa-user-tie"></i> View Our Trainers
+        </a>
     </div>
 </div>
 {% endif %}

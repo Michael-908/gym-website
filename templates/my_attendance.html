@@ -3,6 +3,7 @@
 
 {% block content %}
 
+<!-- Page Header -->
 <div style="margin-bottom:24px;">
     <h4 style="font-size:1.1rem;font-weight:700;color:#E6EDF3;margin:0;">
         <i class="fas fa-calendar-check" style="color:#36B9CC;margin-right:8px;"></i>My Attendance
@@ -10,8 +11,8 @@
     <p style="font-size:0.8rem;color:#8B949E;margin:4px 0 0;">Your gym visit history and check-in records.</p>
 </div>
 
-<!-- Stats -->
-<div class="m-stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+<!-- Stats Row -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;">
     <div class="m-stat-card blue">
         <div>
             <div class="m-stat-label">Total Visits</div>
@@ -19,23 +20,30 @@
         </div>
         <div class="m-stat-icon"><i class="fas fa-calendar-check"></i></div>
     </div>
+
     <div class="m-stat-card green">
         <div>
             <div class="m-stat-label">This Month</div>
             <div class="m-stat-value">
-                {% set month_count = records|selectattr('date')|list|length %}
-                {{ records|length if records else 0 }}
+                {% set this_month = namespace(count=0) %}
+                {% for r in records %}
+                    {% if r.date and r.date.strftime('%Y-%m') == today.strftime('%Y-%m') %}
+                        {% set this_month.count = this_month.count + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {{ this_month.count }}
             </div>
         </div>
         <div class="m-stat-icon"><i class="fas fa-fire"></i></div>
     </div>
+
     <div class="m-stat-card purple">
         <div>
             <div class="m-stat-label">Current Status</div>
-            <div class="m-stat-value" style="font-size:1rem;margin-top:4px;">
+            <div class="m-stat-value" style="font-size:1rem;margin-top:6px;">
                 {% set latest = records[0] if records else none %}
                 {% if latest and not latest.check_out %}
-                    <span class="m-badge m-badge-success">Present</span>
+                    <span class="m-badge m-badge-success">● Present</span>
                 {% else %}
                     <span class="m-badge m-badge-secondary">Away</span>
                 {% endif %}
@@ -43,16 +51,43 @@
         </div>
         <div class="m-stat-icon"><i class="fas fa-user-check"></i></div>
     </div>
+
+    {% if records %}
+    <div class="m-stat-card yellow">
+        <div>
+            <div class="m-stat-label">Avg. Duration</div>
+            <div class="m-stat-value" style="font-size:1.3rem;">
+                {% set total_mins = namespace(v=0) %}
+                {% set counted = namespace(v=0) %}
+                {% for r in records %}
+                    {% if r.check_in and r.check_out %}
+                        {% set total_mins.v = total_mins.v + ((r.check_out - r.check_in).seconds // 60) %}
+                        {% set counted.v = counted.v + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {% if counted.v > 0 %}
+                    {% set avg = (total_mins.v / counted.v)|int %}
+                    {% if avg >= 60 %}{{ avg // 60 }}h {{ avg % 60 }}m{% else %}{{ avg }}m{% endif %}
+                {% else %}—{% endif %}
+            </div>
+        </div>
+        <div class="m-stat-icon"><i class="fas fa-clock"></i></div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Attendance Table -->
-<div class="m-card">
-    <div class="m-card-header">
-        <span><i class="fas fa-clipboard-list" style="margin-right:8px;color:#36B9CC;"></i>Visit History</span>
-        <span class="m-badge m-badge-info">{{ total }} total visits</span>
+<div class="member-card">
+    <div class="member-card-header" style="justify-content:space-between;">
+        <span><i class="fas fa-clipboard-list" style="color:#36B9CC;margin-right:8px;"></i>Visit History</span>
+        <span style="background:rgba(54,185,204,0.15);color:#36B9CC;
+                     padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+            {{ total }} total visits
+        </span>
     </div>
+
+    {% if records %}
     <div style="overflow-x:auto;">
-        {% if records %}
         <table class="m-table">
             <thead>
                 <tr>
@@ -68,30 +103,41 @@
                 {% for record in records %}
                 <tr>
                     <td style="color:#8B949E;">{{ loop.index }}</td>
-                    <td style="color:#C9D1D9;font-size:0.82rem;">
-                        {{ record.date.strftime('%A, %d %B %Y') if record.date else 'N/A' }}
+                    <td>
+                        <div style="color:#C9D1D9;font-size:0.85rem;">
+                            {{ record.date.strftime('%A') if record.date else '' }}
+                        </div>
+                        <div style="color:#8B949E;font-size:0.75rem;">
+                            {{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}
+                        </div>
                     </td>
                     <td>
-                        <span style="color:#10B981;font-size:0.82rem;font-weight:600;">
-                            <i class="fas fa-sign-in-alt" style="margin-right:4px;"></i>
+                        <span style="color:#10B981;font-size:0.85rem;font-weight:600;
+                                     display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-sign-in-alt"></i>
                             {{ record.check_in.strftime('%I:%M %p') if record.check_in else 'N/A' }}
                         </span>
                     </td>
                     <td>
                         {% if record.check_out %}
-                        <span style="color:#F85149;font-size:0.82rem;font-weight:600;">
-                            <i class="fas fa-sign-out-alt" style="margin-right:4px;"></i>
+                        <span style="color:#F85149;font-size:0.85rem;font-weight:600;
+                                     display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-sign-out-alt"></i>
                             {{ record.check_out.strftime('%I:%M %p') }}
                         </span>
                         {% else %}
                         <span style="color:#8B949E;font-size:0.82rem;">Still in</span>
                         {% endif %}
                     </td>
-                    <td style="color:#8B949E;font-size:0.8rem;">
+                    <td>
                         {% if record.check_in and record.check_out %}
                             {% set diff = (record.check_out - record.check_in).seconds // 60 %}
-                            {% if diff >= 60 %}{{ diff // 60 }}h {{ diff % 60 }}m{% else %}{{ diff }}m{% endif %}
-                        {% else %}—{% endif %}
+                            <span style="color:#E6EDF3;font-weight:600;">
+                                {% if diff >= 60 %}{{ diff // 60 }}h {{ diff % 60 }}m{% else %}{{ diff }}m{% endif %}
+                            </span>
+                        {% else %}
+                        <span style="color:#8B949E;">—</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if record.check_out %}
@@ -104,13 +150,67 @@
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <div style="padding:60px;text-align:center;color:#8B949E;">
-            <i class="fas fa-calendar-times" style="font-size:2.5rem;margin-bottom:14px;display:block;opacity:0.2;"></i>
-            <p>No attendance records yet. Your visits will appear here after checking in.</p>
-        </div>
-        {% endif %}
     </div>
+
+    <!-- Monthly heatmap summary -->
+    {% if records %}
+    <div style="padding:16px 18px;border-top:1px solid #30363D;">
+        <div style="font-size:0.7rem;font-weight:800;color:rgba(255,255,255,0.3);
+                    text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+            Visit Frequency (last 7 months)
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            {% set months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+            {% for i in range(7) %}
+            {% set month_visits = namespace(count=0) %}
+            {% for r in records %}
+                {% if r.date %}
+                {% set age_months = ((today.year - r.date.year) * 12 + today.month - r.date.month) %}
+                {% if age_months == (6 - i) %}
+                    {% set month_visits.count = month_visits.count + 1 %}
+                {% endif %}
+                {% endif %}
+            {% endfor %}
+            <div style="text-align:center;">
+                <div style="width:40px;height:40px;border-radius:8px;
+                            background:{% if month_visits.count == 0 %}#21262D
+                            {% elif month_visits.count <= 4 %}rgba(16,185,129,0.2)
+                            {% elif month_visits.count <= 8 %}rgba(16,185,129,0.4)
+                            {% else %}rgba(16,185,129,0.7){% endif %};
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:0.8rem;font-weight:700;
+                            color:{% if month_visits.count == 0 %}#8B949E{% else %}#10B981{% endif %};">
+                    {{ month_visits.count }}
+                </div>
+                <div style="font-size:0.65rem;color:#8B949E;margin-top:3px;">
+                    {% set target_month = today.month - (6 - i) %}
+                    {% if target_month <= 0 %}{{ months[target_month + 11] }}{% else %}{{ months[target_month - 1] }}{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="padding:60px;text-align:center;color:#8B949E;">
+        <div style="width:70px;height:70px;border-radius:50%;background:rgba(54,185,204,0.1);
+                    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="fas fa-calendar-times" style="font-size:1.8rem;color:#36B9CC;opacity:0.4;"></i>
+        </div>
+        <p style="color:#E6EDF3;font-weight:700;margin-bottom:8px;">No Attendance Records Yet</p>
+        <p style="font-size:0.82rem;max-width:300px;margin:0 auto;line-height:1.6;">
+            Your gym visits will appear here after a trainer checks you in.
+        </p>
+    </div>
+    {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Pass today to template context
+var today = new Date();
+</script>
 {% endblock %}
