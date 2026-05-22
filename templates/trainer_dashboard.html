@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="theme-color" content="#161B22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Trainer Dashboard - Gym System</title>
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900" rel="stylesheet">
@@ -14,7 +17,9 @@
         .t-sidebar {
             position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
             background: #161B22; border-right: 1px solid #30363D;
-            padding: 0; z-index: 999; display: flex; flex-direction: column;
+            z-index: 1100; display: flex; flex-direction: column;
+            overflow-y: auto;
+            transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
         }
         .t-sidebar-brand {
             padding: 20px; font-size: 1.1rem; font-weight: 800; color: #1A73E8;
@@ -24,6 +29,7 @@
             display: flex; align-items: center; gap: 12px;
             padding: 12px 20px; color: #8B949E; text-decoration: none;
             font-size: 0.9rem; transition: all 0.2s; border-left: 3px solid transparent;
+            -webkit-tap-highlight-color: transparent;
         }
         .t-sidebar a:hover, .t-sidebar a.active {
             color: #E6EDF3; background: #1C2333; border-left-color: #1A73E8;
@@ -35,25 +41,36 @@
         .t-sidebar-bottom a { color: #F85149 !important; }
         .t-sidebar-bottom a:hover { background: rgba(248,81,73,0.1) !important; border-left-color: #F85149 !important; }
 
+        /* ── Sidebar overlay ── */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.65); z-index: 1090;
+            backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.active { display: block; }
+
         /* ── Topbar ── */
         .t-topbar {
             margin-left: 220px; background: #161B22; border-bottom: 1px solid #30363D;
             padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
-            position: sticky; top: 0; z-index: 100;
+            position: sticky; top: 0; z-index: 200; gap: 12px;
         }
-        .t-topbar-left h4 { font-size: 1.1rem; font-weight: 700; color: #E6EDF3; margin: 0; }
-        .t-topbar-left p { font-size: 0.8rem; color: #8B949E; margin: 0; }
-        .t-topbar-right { display: flex; align-items: center; gap: 14px; }
-        .t-user-badge {
-            display: flex; align-items: center; gap: 8px;
-            background: #21262D; padding: 6px 12px; border-radius: 20px;
-            font-size: 0.85rem; color: #E6EDF3;
-        }
+        .t-topbar-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .t-topbar-left h4 { font-size: 1rem; font-weight: 700; color: #E6EDF3; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .t-topbar-left p { font-size: 0.78rem; color: #8B949E; margin: 0; }
+        .t-topbar-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .t-user-badge { display: flex; align-items: center; gap: 8px; background: #21262D; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; color: #E6EDF3; }
         .t-user-badge img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1A73E8; }
-        .t-role-badge {
-            background: rgba(26,115,232,0.2); color: #1A73E8;
-            padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+        .t-role-badge { background: rgba(26,115,232,0.2); color: #1A73E8; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+
+        /* ── Hamburger ── */
+        .t-hamburger {
+            display: none; background: none; border: none; cursor: pointer;
+            padding: 8px; border-radius: 8px; color: #8B949E; font-size: 1.15rem;
+            align-items: center; justify-content: center; transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent; flex-shrink: 0;
         }
+        .t-hamburger:hover { color: #E6EDF3; background: #21262D; }
 
         /* ── Content ── */
         .t-content { margin-left: 220px; padding: 24px; }
@@ -62,250 +79,232 @@
         .t-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
         .t-stat-card {
             background: #161B22; border: 1px solid #30363D; border-radius: 12px;
-            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            padding: 18px; display: flex; justify-content: space-between; align-items: center;
             transition: border-color 0.2s;
         }
         .t-stat-card:hover { border-color: #1A73E8; }
-        .t-stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-            color: #8B949E; letter-spacing: 1px; margin-bottom: 6px; }
-        .t-stat-value { font-size: 1.8rem; font-weight: 800; color: #E6EDF3; }
-        .t-stat-icon { font-size: 1.8rem; opacity: 0.3; }
-        .t-stat-card.blue .t-stat-icon  { color: #1A73E8; }
-        .t-stat-card.green .t-stat-icon { color: #10B981; }
-        .t-stat-card.yellow .t-stat-icon{ color: #F59E0B; }
-        .t-stat-card.purple .t-stat-icon{ color: #8B5CF6; }
-        .t-stat-card.blue  { border-left: 3px solid #1A73E8; }
-        .t-stat-card.green { border-left: 3px solid #10B981; }
-        .t-stat-card.yellow{ border-left: 3px solid #F59E0B; }
-        .t-stat-card.purple{ border-left: 3px solid #8B5CF6; }
+        .t-stat-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #8B949E; letter-spacing: 1px; margin-bottom: 6px; }
+        .t-stat-value { font-size: 1.7rem; font-weight: 800; color: #E6EDF3; }
+        .t-stat-icon { font-size: 1.7rem; opacity: 0.3; }
+        .t-stat-card.blue   { border-left: 3px solid #1A73E8; } .t-stat-card.blue   .t-stat-icon { color: #1A73E8; }
+        .t-stat-card.green  { border-left: 3px solid #10B981; } .t-stat-card.green  .t-stat-icon { color: #10B981; }
+        .t-stat-card.yellow { border-left: 3px solid #F59E0B; } .t-stat-card.yellow .t-stat-icon { color: #F59E0B; }
+        .t-stat-card.purple { border-left: 3px solid #8B5CF6; } .t-stat-card.purple .t-stat-icon { color: #8B5CF6; }
 
-        /* ── Quick Actions ── */
-        .t-quick-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+        /* ── Buttons ── */
         .t-btn {
             padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer;
             font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center;
-            gap: 7px; text-decoration: none; transition: all 0.2s;
+            gap: 7px; text-decoration: none; transition: all 0.2s; touch-action: manipulation;
         }
-        .t-btn-primary   { background: #1A73E8; color: #fff; }
-        .t-btn-primary:hover { background: #1557B0; color: #fff; }
-        .t-btn-success   { background: #10B981; color: #fff; }
-        .t-btn-success:hover { background: #059669; color: #fff; }
-        .t-btn-warning   { background: #F59E0B; color: #000; }
-        .t-btn-warning:hover { background: #D97706; color: #000; }
-        .t-btn-info      { background: #36B9CC; color: #fff; }
-        .t-btn-info:hover{ background: #2a96a5; color: #fff; }
-        .t-btn-secondary { background: #30363D; color: #E6EDF3; }
-        .t-btn-secondary:hover { background: #3D444D; color: #E6EDF3; }
-        .t-btn-danger    { background: #F85149; color: #fff; }
-        .t-btn-danger:hover{ background: #d73a49; color: #fff; }
+        .t-btn-primary   { background: #1A73E8; color: #fff; } .t-btn-primary:hover   { background: #1557B0; color: #fff; text-decoration: none; }
+        .t-btn-success   { background: #10B981; color: #fff; } .t-btn-success:hover   { background: #059669; color: #fff; text-decoration: none; }
+        .t-btn-warning   { background: #F59E0B; color: #000; } .t-btn-warning:hover   { background: #D97706; color: #000; text-decoration: none; }
+        .t-btn-info      { background: #36B9CC; color: #fff; } .t-btn-info:hover      { background: #2a96a5; color: #fff; text-decoration: none; }
+        .t-btn-secondary { background: #30363D; color: #E6EDF3; } .t-btn-secondary:hover { background: #3D444D; color: #E6EDF3; text-decoration: none; }
+        .t-btn-danger    { background: #F85149; color: #fff; } .t-btn-danger:hover    { background: #d73a49; color: #fff; text-decoration: none; }
         .t-btn-sm { padding: 5px 12px; font-size: 0.78rem; }
 
         /* ── Cards ── */
-        .t-card {
-            background: #161B22; border: 1px solid #30363D; border-radius: 12px;
-            overflow: hidden; margin-bottom: 20px;
-        }
-        .t-card-header {
-            background: #21262D; padding: 14px 18px;
-            font-weight: 700; font-size: 0.95rem; color: #E6EDF3;
-            border-bottom: 1px solid #30363D; display: flex; align-items: center;
-            justify-content: space-between;
-        }
+        .t-card { background: #161B22; border: 1px solid #30363D; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+        .t-card-header { background: #21262D; padding: 14px 18px; font-weight: 700; font-size: 0.95rem; color: #E6EDF3; border-bottom: 1px solid #30363D; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
         .t-card-body { padding: 18px; }
 
         /* ── Table ── */
         .t-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-        .t-table th { padding: 10px 12px; text-align: left; color: #8B949E;
-            font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.5px; border-bottom: 1px solid #30363D; }
+        .t-table th { padding: 10px 12px; text-align: left; color: #8B949E; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363D; }
         .t-table td { padding: 11px 12px; border-bottom: 1px solid #21262D; color: #C9D1D9; vertical-align: middle; }
         .t-table tr:last-child td { border-bottom: none; }
         .t-table tr:hover td { background: #1C2333; }
 
         /* ── Badges ── */
-        .t-badge { display: inline-block; padding: 3px 10px; border-radius: 20px;
-            font-size: 0.72rem; font-weight: 700; }
+        .t-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
         .t-badge-success { background: rgba(16,185,129,0.15); color: #10B981; }
         .t-badge-warning { background: rgba(245,158,11,0.15); color: #F59E0B; }
-        .t-badge-danger  { background: rgba(248,81,73,0.15); color: #F85149; }
+        .t-badge-danger  { background: rgba(248,81,73,0.15);  color: #F85149; }
         .t-badge-info    { background: rgba(54,185,204,0.15); color: #36B9CC; }
         .t-badge-primary { background: rgba(26,115,232,0.15); color: #1A73E8; }
+        .t-badge-secondary { background: rgba(139,148,158,0.15); color: #8B949E; }
 
-        /* ── Grid ── */
+        /* ── Grids ── */
         .t-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .t-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 
-        /* ── List Items ── */
-        .t-list-item {
-            display: flex; align-items: center; padding: 12px 0;
-            border-bottom: 1px solid #21262D;
-        }
-        .t-list-item:last-child { border-bottom: none; }
-        .t-list-icon {
-            width: 38px; height: 38px; border-radius: 50%; display: flex;
-            align-items: center; justify-content: center; font-size: 1rem; margin-right: 12px; flex-shrink: 0;
-        }
-        .t-list-icon.blue   { background: rgba(26,115,232,0.15); color: #1A73E8; }
-        .t-list-icon.green  { background: rgba(16,185,129,0.15); color: #10B981; }
-        .t-list-icon.yellow { background: rgba(245,158,11,0.15); color: #F59E0B; }
-
-        /* ── Flash Messages ── */
+        /* ── Flash ── */
         .t-flash { margin-bottom: 16px; }
-        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 10px;
-            border: 1px solid transparent; font-size: 0.875rem; display: flex;
-            align-items: center; justify-content: space-between; }
+        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; border: 1px solid transparent; font-size: 0.875rem; display: flex; align-items: center; justify-content: space-between; }
         .alert-success { background: rgba(16,185,129,0.1); border-color: #10B981; color: #10B981; }
         .alert-danger  { background: rgba(248,81,73,0.1);  border-color: #F85149; color: #F85149; }
         .alert-warning { background: rgba(245,158,11,0.1); border-color: #F59E0B; color: #F59E0B; }
         .alert-info    { background: rgba(26,115,232,0.1); border-color: #1A73E8; color: #1A73E8; }
         .alert .close  { background: none; border: none; color: inherit; cursor: pointer; font-size: 1.1rem; }
 
-        /* ── Modal ── */
-        .t-modal-overlay { display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
-        .t-modal-overlay.show { display: flex; }
-        .t-modal {
-            background: #161B22; border: 1px solid #30363D; border-radius: 14px;
-            width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto;
-        }
-        .t-modal-header { padding: 18px 20px; border-bottom: 1px solid #30363D;
-            display: flex; align-items: center; justify-content: space-between; }
-        .t-modal-header h5 { margin: 0; font-weight: 700; color: #E6EDF3; }
-        .t-modal-close { background: none; border: none; color: #8B949E; cursor: pointer;
-            font-size: 1.3rem; line-height: 1; padding: 0; }
-        .t-modal-close:hover { color: #E6EDF3; }
-        .t-modal-body   { padding: 20px; }
-        .t-modal-footer { padding: 14px 20px; border-top: 1px solid #30363D;
-            display: flex; gap: 10px; justify-content: flex-end; }
-
         /* ── Forms ── */
         .t-form-group { margin-bottom: 16px; }
-        .t-form-group label { display: block; font-size: 0.82rem; font-weight: 600;
-            color: #8B949E; margin-bottom: 6px; }
+        .t-form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #8B949E; margin-bottom: 6px; }
         .t-form-control {
-            width: 100%; padding: 9px 12px; background: #0D1117; border: 1px solid #30363D;
-            border-radius: 8px; color: #E6EDF3; font-size: 0.875rem; font-family: inherit;
-            transition: border-color 0.2s;
+            width: 100%; padding: 10px 12px; background: #0D1117; border: 1px solid #30363D;
+            border-radius: 8px; color: #E6EDF3; font-size: 16px; font-family: inherit; transition: border-color 0.2s;
         }
         .t-form-control:focus { outline: none; border-color: #1A73E8; }
-        .t-form-row { display: grid; gap: 16px; }
-        .t-form-row.cols-2 { grid-template-columns: 1fr 1fr; }
 
-        /* ── Client avatar ── */
-        .t-avatar { width: 36px; height: 36px; border-radius: 50%;
-            background: linear-gradient(135deg,#1A73E8,#8B5CF6);
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0; }
+        /* ── Avatar ── */
+        .t-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,#1A73E8,#8B5CF6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0; }
 
+        /* ── List ── */
+        .t-list-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #21262D; }
+        .t-list-item:last-child { border-bottom: none; }
+        .t-list-icon { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-right: 12px; flex-shrink: 0; }
+        .t-list-icon.blue   { background: rgba(26,115,232,0.15); color: #1A73E8; }
+        .t-list-icon.green  { background: rgba(16,185,129,0.15); color: #10B981; }
+        .t-list-icon.yellow { background: rgba(245,158,11,0.15);  color: #F59E0B; }
+
+        /* ── Quick Actions ── */
+        .t-quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
         /* ── Tabs ── */
-        .dash-tabs{display:flex;gap:4px;margin-bottom:24px;background:#161B22;border:1px solid #30363D;border-radius:10px;padding:5px;}
-        .dash-tab{padding:8px 18px;border-radius:7px;border:none;background:transparent;color:#8B949E;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:7px;}
-        .dash-tab:hover{color:#E6EDF3;background:#21262D;}
-        .dash-tab.active{background:#1A73E8;color:#fff;}
-        .dash-panel{display:none;}
-        .dash-panel.active{display:block;}
+        .dash-tabs { display:flex; gap:4px; margin-bottom:24px; background:#161B22; border:1px solid #30363D; border-radius:10px; padding:5px; overflow-x: auto; }
+        .dash-tab { padding:8px 16px; border-radius:7px; border:none; background:transparent; color:#8B949E; font-size:0.85rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:'Nunito',sans-serif; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
+        .dash-tab:hover { color:#E6EDF3; background:#21262D; }
+        .dash-tab.active { background:#1A73E8; color:#fff; }
+        .dash-panel { display:none; }
+        .dash-panel.active { display:block; }
+
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0D1117; }
         ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
 
+        /* ── Mobile Bottom Nav ── */
+        .mobile-bottom-nav {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0;
+            background: #161B22; border-top: 1px solid #30363D;
+            z-index: 300; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .mobile-bottom-nav .mbn-inner { display: flex; align-items: stretch; height: 58px; }
+        .mobile-bottom-nav a {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 3px; color: #8B949E; text-decoration: none;
+            font-size: 0.6rem; font-weight: 700; transition: color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-bottom-nav a i { font-size: 1.05rem; }
+        .mobile-bottom-nav a.active, .mobile-bottom-nav a:hover { color: #1A73E8; text-decoration: none; }
+
         /* ── Responsive ── */
         @media (max-width: 992px) {
             .t-stats { grid-template-columns: 1fr 1fr; }
-            .t-grid-2, .t-grid-3 { grid-template-columns: 1fr; }
+            .t-grid-2 { grid-template-columns: 1fr; }
         }
+
         @media (max-width: 768px) {
             .t-sidebar { transform: translateX(-100%); }
-            .t-topbar, .t-content { margin-left: 0; }
-            .t-stats { grid-template-columns: 1fr; }
+            .t-sidebar.open { transform: translateX(0); box-shadow: 8px 0 30px rgba(0,0,0,0.5); }
+
+            .t-topbar { margin-left: 0; padding: 12px 14px; }
+            .t-topbar .t-role-badge { display: none; }
+            .t-topbar-left h4 { font-size: 0.9rem; }
+            .t-topbar-left p { display: none; }
+            .t-content { margin-left: 0; padding: 16px 14px 76px; }
+
+            .t-hamburger { display: flex; }
+            .mobile-bottom-nav { display: block; }
+
+            .t-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .t-stat-card { padding: 14px 12px; }
+            .t-stat-value { font-size: 1.35rem; }
+            .t-stat-icon  { font-size: 1.3rem; }
+
+            .t-user-badge span { display: none; }
+            .t-user-badge { padding: 5px 8px; }
+
+            .t-table { font-size: 0.78rem; }
+            .t-table th, .t-table td { padding: 8px 8px; }
+
+            .dash-tabs { padding: 4px; }
+            .dash-tab  { padding: 7px 12px; font-size: 0.78rem; }
+        }
+
+        @media (max-width: 420px) {
+            .t-content { padding: 12px 12px 76px; }
+            .t-btn { font-size: 0.78rem; padding: 7px 10px; }
+            .t-stats { gap: 8px; }
         }
     </style>
 </head>
 <body>
 
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
 <!-- ── Sidebar ── -->
-<nav class="t-sidebar">
+<nav class="t-sidebar" id="mainSidebar">
     <div class="t-sidebar-brand">
         <i class="fas fa-dumbbell"></i> GYM SYSTEM
     </div>
 
     <div class="t-sidebar-section">Main</div>
-    <a href="{{ url_for('trainer_dashboard') }}" class="active">
+    <a href="{{ url_for('trainer_dashboard') }}" class="active" onclick="closeSidebar()">
         <i class="fas fa-tachometer-alt"></i> Dashboard
     </a>
 
     <div class="t-sidebar-section">Manage</div>
-    <a href="{{ url_for('classes') }}">
-        <i class="fas fa-calendar-alt"></i> Classes
-    </a>
-    <a href="{{ url_for('attendance') }}">
-        <i class="fas fa-calendar-check"></i> Attendance
-    </a>
-    <a href="{{ url_for('workouts') }}">
-        <i class="fas fa-running"></i> Workouts
-    </a>
-    <a href="{{ url_for('nutrition') }}">
-        <i class="fas fa-apple-alt"></i> Nutrition
-    </a>
-    <a href="{{ url_for('progress') }}">
-        <i class="fas fa-chart-line"></i> Progress
-    </a>
+    <a href="{{ url_for('classes') }}"    onclick="closeSidebar()"><i class="fas fa-calendar-alt"></i> Classes</a>
+    <a href="{{ url_for('attendance') }}" onclick="closeSidebar()"><i class="fas fa-calendar-check"></i> Attendance</a>
+    <a href="{{ url_for('workouts') }}"   onclick="closeSidebar()"><i class="fas fa-running"></i> Workouts</a>
+    <a href="{{ url_for('nutrition') }}"  onclick="closeSidebar()"><i class="fas fa-apple-alt"></i> Nutrition</a>
+    <a href="{{ url_for('progress') }}"   onclick="closeSidebar()"><i class="fas fa-chart-line"></i> Progress</a>
 
     <div class="t-sidebar-section">Other</div>
-    <a href="{{ url_for('settings') }}">
-        <i class="fas fa-cog"></i> Settings
-    </a>
+    <a href="{{ url_for('settings') }}" onclick="closeSidebar()"><i class="fas fa-cog"></i> Settings</a>
 
     <div class="t-sidebar-bottom">
-        <a href="{{ url_for('logout') }}">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>
 
 <!-- ── Topbar ── -->
 <nav class="t-topbar">
     <div class="t-topbar-left">
-        <h4>Welcome back, {{ trainer.name if trainer else current_user.username }}! 👋</h4>
-        <p><i class="fas fa-calendar-day" style="margin-right:5px;"></i>{{ today.strftime('%A, %d %B %Y') }}
-            — <strong>{{ today_classes|length }}</strong> class(es) today</p>
+        <button class="t-hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div>
+            <h4>Welcome back, {{ trainer.name if trainer else current_user.username }}! 👋</h4>
+            <p><i class="fas fa-calendar-day" style="margin-right:5px;"></i>{{ today.strftime('%A, %d %B %Y') }}
+                — <strong>{{ today_classes|length }}</strong> class(es) today</p>
+        </div>
     </div>
     <div class="t-topbar-right">
         <span class="t-role-badge"><i class="fas fa-user-tie" style="margin-right:5px;"></i>Trainer</span>
         <div class="t-user-badge">
             <img src="{{ url_for('static', filename='img/undraw_profile.svg') }}" alt="Profile">
-            {{ current_user.username }}
+            <span>{{ current_user.username }}</span>
         </div>
     </div>
 </nav>
 
-<!-- ── Main Content ── -->
+<!-- ── Content ── -->
 <div class="t-content">
 
-    <!-- Flash Messages -->
     <div class="t-flash">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">
-                    {{ message }}
-                    <button class="close" onclick="this.parentElement.remove()">×</button>
-                </div>
-                {% endfor %}
-            {% endif %}
+            {% if messages %}{% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+                <button class="close" onclick="this.parentElement.remove()">×</button>
+            </div>
+            {% endfor %}{% endif %}
         {% endwith %}
     </div>
 
-    <!-- Stats Row — always visible -->
+    <!-- Stats -->
     <div class="t-stats">
         <div class="t-stat-card blue"><div><div class="t-stat-label">My Clients</div><div class="t-stat-value">{{ my_clients|length }}</div></div><div class="t-stat-icon"><i class="fas fa-users"></i></div></div>
         <div class="t-stat-card green"><div><div class="t-stat-label">Today's Classes</div><div class="t-stat-value">{{ today_classes|length }}</div></div><div class="t-stat-icon"><i class="fas fa-calendar-check"></i></div></div>
         <div class="t-stat-card yellow"><div><div class="t-stat-label">Attendance Today</div><div class="t-stat-value">{{ week_attendance }}</div></div><div class="t-stat-icon"><i class="fas fa-user-check"></i></div></div>
-        <div class="t-stat-card purple"><div><div class="t-stat-label">Specialization</div><div class="t-stat-value" style="font-size:1rem;">{{ trainer.specialization if trainer else "N/A" }}</div></div><div class="t-stat-icon"><i class="fas fa-dumbbell"></i></div></div>
+        <div class="t-stat-card purple"><div><div class="t-stat-label">Specialization</div><div class="t-stat-value" style="font-size:0.95rem;margin-top:4px;">{{ trainer.specialization if trainer else "N/A" }}</div></div><div class="t-stat-icon"><i class="fas fa-dumbbell"></i></div></div>
     </div>
 
-    <!-- Tab Nav -->
+    <!-- Tabs -->
     <div class="dash-tabs">
         <button class="dash-tab active" onclick="switchTab('overview',this)"><i class="fas fa-tachometer-alt"></i> Overview</button>
         <button class="dash-tab" onclick="switchTab('clients',this)"><i class="fas fa-users"></i> My Clients</button>
@@ -316,25 +315,43 @@
     <div id="tab-overview" class="dash-panel active">
         <div class="t-card">
             <div class="t-card-header"><i class="fas fa-bolt" style="margin-right:8px;color:#F59E0B;"></i>Quick Actions</div>
-            <div class="t-card-body"><div class="t-quick-actions">
-                <a href="{{ url_for('attendance') }}"  class="t-btn t-btn-success"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
-                <a href="{{ url_for('classes') }}"     class="t-btn t-btn-primary"><i class="fas fa-calendar-alt"></i> Manage Classes</a>
-                <a href="{{ url_for('workouts') }}"    class="t-btn t-btn-info"><i class="fas fa-running"></i> Workouts</a>
-                <a href="{{ url_for('nutrition') }}"   class="t-btn t-btn-warning"><i class="fas fa-apple-alt"></i> Nutrition</a>
-                <a href="{{ url_for('progress') }}"    class="t-btn t-btn-secondary"><i class="fas fa-chart-line"></i> Progress</a>
-            </div></div>
+            <div class="t-card-body">
+                <div class="t-quick-actions">
+                    <a href="{{ url_for('attendance') }}" class="t-btn t-btn-success"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
+                    <a href="{{ url_for('classes') }}"    class="t-btn t-btn-primary"><i class="fas fa-calendar-alt"></i> Manage Classes</a>
+                    <a href="{{ url_for('workouts') }}"   class="t-btn t-btn-info"><i class="fas fa-running"></i> Workouts</a>
+                    <a href="{{ url_for('nutrition') }}"  class="t-btn t-btn-warning"><i class="fas fa-apple-alt"></i> Nutrition</a>
+                    <a href="{{ url_for('progress') }}"   class="t-btn t-btn-secondary"><i class="fas fa-chart-line"></i> Progress</a>
+                </div>
+            </div>
         </div>
         <div class="t-card">
-            <div class="t-card-header"><span><i class="fas fa-calendar-day" style="margin-right:8px;color:#1A73E8;"></i>Today's Classes</span><a href="{{ url_for('classes') }}" class="t-btn t-btn-sm t-btn-primary">+ Add Class</a></div>
+            <div class="t-card-header">
+                <span><i class="fas fa-calendar-day" style="margin-right:8px;color:#1A73E8;"></i>Today's Classes</span>
+                <a href="{{ url_for('classes') }}" class="t-btn t-btn-sm t-btn-primary">+ Add Class</a>
+            </div>
             <div class="t-card-body">
-                {% if today_classes %}{% for class in today_classes %}
+                {% if today_classes %}
+                {% for class in today_classes %}
                 <div class="t-list-item">
                     <div class="t-list-icon blue"><i class="fas fa-dumbbell"></i></div>
-                    <div style="flex:1;"><div style="font-weight:700;color:#E6EDF3;">{{ class.name }}</div>
-                    <div style="font-size:0.8rem;color:#8B949E;"><i class="fas fa-clock" style="margin-right:4px;"></i>{{ class.schedule.strftime("%I:%M %p") if class.schedule else "N/A" }} &nbsp;·&nbsp; <i class="fas fa-users" style="margin-right:4px;"></i>{{ class.bookings|length }}/{{ class.capacity }}</div></div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;color:#E6EDF3;">{{ class.name }}</div>
+                        <div style="font-size:0.8rem;color:#8B949E;">
+                            <i class="fas fa-clock" style="margin-right:4px;"></i>{{ class.schedule.strftime("%I:%M %p") if class.schedule else "N/A" }}
+                            &nbsp;·&nbsp;
+                            <i class="fas fa-users" style="margin-right:4px;"></i>{{ class.bookings|length }}/{{ class.capacity }}
+                        </div>
+                    </div>
                     <span class="t-badge t-badge-success">Today</span>
-                </div>{% endfor %}
-                {% else %}<div style="text-align:center;padding:30px 0;color:#8B949E;"><i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>No classes scheduled today</div>{% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div style="text-align:center;padding:30px 0;color:#8B949E;">
+                    <i class="fas fa-calendar-times" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>
+                    No classes scheduled today
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -342,16 +359,37 @@
     <!-- TAB: CLIENTS -->
     <div id="tab-clients" class="dash-panel">
         <div class="t-card">
-            <div class="t-card-header"><span><i class="fas fa-users" style="margin-right:8px;color:#10B981;"></i>My Clients</span><span class="t-badge t-badge-success">{{ my_clients|length }} total</span></div>
-            <div style="overflow-x:auto;">{% if my_clients %}
-            <table class="t-table"><thead><tr><th>#</th><th>Client</th><th>Goal</th><th>Status</th></tr></thead><tbody>
-            {% for client in my_clients %}<tr>
-                <td style="color:#8B949E;">{{ loop.index }}</td>
-                <td><div style="display:flex;align-items:center;gap:10px;"><div class="t-avatar" style="width:30px;height:30px;font-size:0.75rem;">{{ client.name[0].upper() }}</div><span style="font-weight:600;color:#E6EDF3;">{{ client.name }}</span></div></td>
-                <td style="color:#8B949E;font-size:0.82rem;">{{ client.goal or "No goal set" }}</td>
-                <td><span class="t-badge {{ 't-badge-success' if client.status == 'active' else 't-badge-danger' }}">{{ client.status }}</span></td>
-            </tr>{% endfor %}</tbody></table>
-            {% else %}<div style="padding:50px;text-align:center;color:#8B949E;"><i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.2;"></i><p>No clients assigned yet.</p></div>{% endif %}</div>
+            <div class="t-card-header">
+                <span><i class="fas fa-users" style="margin-right:8px;color:#10B981;"></i>My Clients</span>
+                <span class="t-badge t-badge-success">{{ my_clients|length }} total</span>
+            </div>
+            <div style="overflow-x:auto;">
+                {% if my_clients %}
+                <table class="t-table">
+                    <thead><tr><th>#</th><th>Client</th><th>Goal</th><th>Status</th></tr></thead>
+                    <tbody>
+                    {% for client in my_clients %}
+                    <tr>
+                        <td style="color:#8B949E;">{{ loop.index }}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="t-avatar" style="width:30px;height:30px;font-size:0.75rem;">{{ client.name[0].upper() }}</div>
+                                <span style="font-weight:600;color:#E6EDF3;">{{ client.name }}</span>
+                            </div>
+                        </td>
+                        <td style="color:#8B949E;font-size:0.82rem;">{{ client.goal or "No goal set" }}</td>
+                        <td><span class="t-badge {{ 't-badge-success' if client.status == 'active' else 't-badge-danger' }}">{{ client.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="padding:50px;text-align:center;color:#8B949E;">
+                    <i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.2;"></i>
+                    <p>No clients assigned yet.</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -361,33 +399,105 @@
             <div class="t-card-header"><span><i class="fas fa-plus-circle" style="margin-right:8px;color:#10B981;"></i>Quick Check-In</span></div>
             <div class="t-card-body">
                 <form method="POST" action="{{ url_for('check_in') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                    <div class="t-form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label>Select Member</label>
-                    <select class="t-form-control" name="member_id" required><option value="">Choose a member...</option>{% for member in all_members %}<option value="{{ member.id }}">{{ member.name }}</option>{% endfor %}</select></div>
+                    <div class="t-form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+                        <label>Select Member</label>
+                        <select class="t-form-control" name="member_id" required>
+                            <option value="">Choose a member...</option>
+                            {% for member in all_members %}
+                            <option value="{{ member.id }}">{{ member.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <button type="submit" class="t-btn t-btn-success"><i class="fas fa-check"></i> Check In</button>
                 </form>
             </div>
         </div>
         <div class="t-card">
-            <div class="t-card-header"><span><i class="fas fa-list" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance Records</span><a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a></div>
-            <div style="overflow-x:auto;"><table class="t-table">
-                <thead><tr><th>#</th><th>Member</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>{% for record in recent_attendance %}<tr>
-                    <td>{{ loop.index }}</td>
-                    <td><div style="display:flex;align-items:center;gap:8px;"><div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">{{ record.member.name[0].upper() if record.member else "?" }}</div>{{ record.member.name if record.member else "N/A" }}</div></td>
-                    <td>{{ record.date.strftime("%d %b %Y") if record.date else "N/A" }}</td>
-                    <td style="color:#10B981;">{{ record.check_in.strftime("%I:%M %p") if record.check_in else "N/A" }}</td>
-                    <td style="color:#F85149;">{{ record.check_out.strftime("%I:%M %p") if record.check_out else "—" }}</td>
-                    <td>{% if record.check_out %}<span class="t-badge t-badge-secondary">Checked Out</span>{% else %}<span class="t-badge t-badge-success">Present</span>{% endif %}</td>
-                    <td>{% if not record.check_out %}<a href="{{ url_for('check_out', id=record.id) }}" class="t-btn t-btn-sm t-btn-info"><i class="fas fa-sign-out-alt"></i> Check Out</a>{% endif %}</td>
-                </tr>{% else %}<tr><td colspan="7" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>{% endfor %}</tbody>
-            </table></div>
+            <div class="t-card-header">
+                <span><i class="fas fa-list" style="margin-right:8px;color:#36B9CC;"></i>Recent Attendance</span>
+                <a href="{{ url_for('attendance') }}" class="t-btn t-btn-sm t-btn-info">View All</a>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="t-table">
+                    <thead><tr><th>#</th><th>Member</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                    {% for record in recent_attendance %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div class="t-avatar" style="width:28px;height:28px;font-size:0.72rem;">{{ record.member.name[0].upper() if record.member else "?" }}</div>
+                                {{ record.member.name if record.member else "N/A" }}
+                            </div>
+                        </td>
+                        <td>{{ record.date.strftime("%d %b %Y") if record.date else "N/A" }}</td>
+                        <td style="color:#10B981;">{{ record.check_in.strftime("%I:%M %p") if record.check_in else "N/A" }}</td>
+                        <td style="color:#F85149;">{{ record.check_out.strftime("%I:%M %p") if record.check_out else "—" }}</td>
+                        <td>
+                            {% if record.check_out %}
+                            <span class="t-badge t-badge-secondary">Checked Out</span>
+                            {% else %}
+                            <span class="t-badge t-badge-success">Present</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not record.check_out %}
+                            <a href="{{ url_for('check_out', id=record.id) }}" class="t-btn t-btn-sm t-btn-info"><i class="fas fa-sign-out-alt"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" style="text-align:center;color:#8B949E;padding:20px;">No attendance records yet.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
 </div><!-- /.t-content -->
 
+<!-- ── Mobile Bottom Nav ── -->
+<nav class="mobile-bottom-nav">
+    <div class="mbn-inner">
+        <a href="{{ url_for('trainer_dashboard') }}" class="active">
+            <i class="fas fa-tachometer-alt"></i><span>Home</span>
+        </a>
+        <a href="{{ url_for('attendance') }}">
+            <i class="fas fa-calendar-check"></i><span>Attend.</span>
+        </a>
+        <a href="{{ url_for('workouts') }}">
+            <i class="fas fa-running"></i><span>Workouts</span>
+        </a>
+        <a href="{{ url_for('classes') }}">
+            <i class="fas fa-calendar-alt"></i><span>Classes</span>
+        </a>
+        <a href="javascript:void(0)" onclick="toggleSidebar()">
+            <i class="fas fa-th-large"></i><span>More</span>
+        </a>
+    </div>
+</nav>
+
 <script>
-function switchTab(name,btn){document.querySelectorAll(".dash-panel").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".dash-tab").forEach(b=>b.classList.remove("active"));document.getElementById("tab-"+name).classList.add("active");btn.classList.add("active");}
+function switchTab(name,btn){
+    document.querySelectorAll(".dash-panel").forEach(p=>p.classList.remove("active"));
+    document.querySelectorAll(".dash-tab").forEach(b=>b.classList.remove("active"));
+    document.getElementById("tab-"+name).classList.add("active");
+    btn.classList.add("active");
+}
+function toggleSidebar() {
+    var sidebar = document.getElementById('mainSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar.classList.contains('open')) { closeSidebar(); }
+    else { sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+}
+function closeSidebar() {
+    document.getElementById('mainSidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+window.addEventListener('resize', function(){ if(window.innerWidth>768) closeSidebar(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeSidebar(); });
 </script>
 </body>
 </html>

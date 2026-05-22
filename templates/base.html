@@ -4,11 +4,16 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="theme-color" content="#161B22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gym System">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>{% block title %}Gym Management System{% endblock %}</title>
 
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900" rel="stylesheet">
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,8 +29,9 @@
         .t-sidebar {
             position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
             background: #161B22; border-right: 1px solid #30363D;
-            padding: 0; z-index: 999; display: flex; flex-direction: column;
+            z-index: 1100; display: flex; flex-direction: column;
             overflow-y: auto;
+            transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
         }
         .t-sidebar-brand {
             padding: 18px 20px; font-size: 1.1rem; font-weight: 800; color: #1A73E8;
@@ -35,7 +41,7 @@
         .t-sidebar-brand:hover { color: #1A73E8; text-decoration: none; }
         .t-sidebar a.nav-link-item {
             display: flex; align-items: center; gap: 12px;
-            padding: 11px 20px; color: #8B949E; text-decoration: none;
+            padding: 12px 20px; color: #8B949E; text-decoration: none;
             font-size: 0.875rem; transition: all 0.2s; border-left: 3px solid transparent;
         }
         .t-sidebar a.nav-link-item:hover,
@@ -49,22 +55,40 @@
         }
         .t-sidebar-bottom { margin-top: auto; border-top: 1px solid #30363D; }
         .t-sidebar-bottom a.nav-link-item { color: #F85149 !important; }
-        .t-sidebar-bottom a.nav-link-item:hover { background: rgba(248,81,73,0.1) !important; border-left-color: #F85149 !important; }
+        .t-sidebar-bottom a.nav-link-item:hover {
+            background: rgba(248,81,73,0.1) !important; border-left-color: #F85149 !important;
+        }
+
+        /* ── Sidebar overlay ── */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.65); z-index: 1090;
+            backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.active { display: block; }
 
         /* ── Topbar ── */
         .t-topbar {
             margin-left: 220px; background: #161B22; border-bottom: 1px solid #30363D;
             padding: 0 24px; height: 60px; display: flex; align-items: center;
-            justify-content: flex-end; position: sticky; top: 0; z-index: 100;
+            justify-content: space-between; position: sticky; top: 0; z-index: 200;
         }
+        .t-topbar-left { display: flex; align-items: center; gap: 12px; }
         .t-topbar-right { display: flex; align-items: center; gap: 14px; }
+
+        .t-hamburger {
+            display: none; background: none; border: none; cursor: pointer;
+            padding: 8px; border-radius: 8px; color: #8B949E; font-size: 1.15rem;
+            align-items: center; justify-content: center; transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .t-hamburger:hover { color: #E6EDF3; background: #21262D; }
+
         .t-role-badge {
             background: rgba(26,115,232,0.2); color: #1A73E8;
             padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
         }
-        .t-role-badge.admin-badge {
-            background: rgba(245,158,11,0.2); color: #F59E0B;
-        }
+        .t-role-badge.admin-badge { background: rgba(245,158,11,0.2); color: #F59E0B; }
         .t-user-badge {
             display: flex; align-items: center; gap: 8px;
             background: #21262D; padding: 5px 12px; border-radius: 20px;
@@ -84,7 +108,7 @@
             background: #21262D; padding: 14px 18px;
             font-weight: 700; font-size: 0.95rem; color: #E6EDF3;
             border-bottom: 1px solid #30363D; display: flex; align-items: center;
-            justify-content: space-between;
+            justify-content: space-between; flex-wrap: wrap; gap: 8px;
         }
         .t-card-body { padding: 18px; }
 
@@ -92,41 +116,42 @@
         .t-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
         .t-stat-card {
             background: #161B22; border: 1px solid #30363D; border-radius: 12px;
-            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            padding: 18px; display: flex; justify-content: space-between; align-items: center;
         }
-        .t-stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        .t-stat-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
             color: #8B949E; letter-spacing: 1px; margin-bottom: 6px; }
-        .t-stat-value { font-size: 1.8rem; font-weight: 800; color: #E6EDF3; }
-        .t-stat-icon { font-size: 1.8rem; opacity: 0.3; }
+        .t-stat-value { font-size: 1.7rem; font-weight: 800; color: #E6EDF3; }
+        .t-stat-icon { font-size: 1.7rem; opacity: 0.3; }
         .t-stat-card.blue  { border-left: 3px solid #1A73E8; }
-        .t-stat-card.blue .t-stat-icon { color: #1A73E8; }
+        .t-stat-card.blue  .t-stat-icon { color: #1A73E8; }
         .t-stat-card.green { border-left: 3px solid #10B981; }
         .t-stat-card.green .t-stat-icon { color: #10B981; }
         .t-stat-card.yellow{ border-left: 3px solid #F59E0B; }
-        .t-stat-card.yellow .t-stat-icon{ color: #F59E0B; }
+        .t-stat-card.yellow .t-stat-icon { color: #F59E0B; }
         .t-stat-card.purple{ border-left: 3px solid #8B5CF6; }
-        .t-stat-card.purple .t-stat-icon{ color: #8B5CF6; }
+        .t-stat-card.purple .t-stat-icon { color: #8B5CF6; }
         .t-stat-card.red   { border-left: 3px solid #F85149; }
-        .t-stat-card.red .t-stat-icon { color: #F85149; }
+        .t-stat-card.red   .t-stat-icon { color: #F85149; }
 
         /* ── Buttons ── */
         .t-btn {
             padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer;
             font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center;
             gap: 7px; text-decoration: none; transition: all 0.2s;
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
         }
         .t-btn-primary   { background: #1A73E8; color: #fff; }
-        .t-btn-primary:hover { background: #1557B0; color: #fff; text-decoration: none; }
+        .t-btn-primary:hover  { background: #1557B0; color: #fff; text-decoration: none; }
         .t-btn-success   { background: #10B981; color: #fff; }
-        .t-btn-success:hover { background: #059669; color: #fff; text-decoration: none; }
+        .t-btn-success:hover  { background: #059669; color: #fff; text-decoration: none; }
         .t-btn-warning   { background: #F59E0B; color: #000; }
-        .t-btn-warning:hover { background: #D97706; color: #000; text-decoration: none; }
+        .t-btn-warning:hover  { background: #D97706; color: #000; text-decoration: none; }
         .t-btn-info      { background: #36B9CC; color: #fff; }
-        .t-btn-info:hover{ background: #2a96a5; color: #fff; text-decoration: none; }
+        .t-btn-info:hover     { background: #2a96a5; color: #fff; text-decoration: none; }
         .t-btn-secondary { background: #30363D; color: #E6EDF3; }
         .t-btn-secondary:hover { background: #3D444D; color: #E6EDF3; text-decoration: none; }
         .t-btn-danger    { background: #F85149; color: #fff; }
-        .t-btn-danger:hover{ background: #d73a49; color: #fff; text-decoration: none; }
+        .t-btn-danger:hover   { background: #d73a49; color: #fff; text-decoration: none; }
         .t-btn-sm { padding: 5px 12px; font-size: 0.78rem; }
         .t-btn-outline-danger { background: transparent; border: 1px solid #F85149; color: #F85149; }
         .t-btn-outline-danger:hover { background: #F85149; color: #fff; text-decoration: none; }
@@ -141,24 +166,22 @@
         .t-table tr:hover td { background: #1C2333; }
 
         /* ── Badges ── */
-        .t-badge { display: inline-block; padding: 3px 10px; border-radius: 20px;
-            font-size: 0.72rem; font-weight: 700; }
-        .t-badge-success { background: rgba(16,185,129,0.15); color: #10B981; }
-        .t-badge-warning { background: rgba(245,158,11,0.15); color: #F59E0B; }
-        .t-badge-danger  { background: rgba(248,81,73,0.15); color: #F85149; }
-        .t-badge-info    { background: rgba(54,185,204,0.15); color: #36B9CC; }
-        .t-badge-primary { background: rgba(26,115,232,0.15); color: #1A73E8; }
+        .t-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+        .t-badge-success   { background: rgba(16,185,129,0.15);  color: #10B981; }
+        .t-badge-warning   { background: rgba(245,158,11,0.15);  color: #F59E0B; }
+        .t-badge-danger    { background: rgba(248,81,73,0.15);   color: #F85149; }
+        .t-badge-info      { background: rgba(54,185,204,0.15);  color: #36B9CC; }
+        .t-badge-primary   { background: rgba(26,115,232,0.15);  color: #1A73E8; }
         .t-badge-secondary { background: rgba(139,148,158,0.15); color: #8B949E; }
 
-        /* ── Grid ── */
+        /* ── Grids ── */
         .t-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .t-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
         .t-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
         /* ── Forms ── */
         .t-form-group { margin-bottom: 16px; }
-        .t-form-group label { display: block; font-size: 0.82rem; font-weight: 600;
-            color: #8B949E; margin-bottom: 6px; }
+        .t-form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #8B949E; margin-bottom: 6px; }
         .t-form-control {
             width: 100%; padding: 9px 12px; background: #0D1117; border: 1px solid #30363D;
             border-radius: 8px; color: #E6EDF3; font-size: 0.875rem; font-family: inherit;
@@ -166,23 +189,19 @@
         }
         .t-form-control:focus { outline: none; border-color: #1A73E8; }
 
-        /* Override Bootstrap form-control for dark theme */
+        /* Bootstrap dark overrides — font-size 16px prevents iOS zoom */
         .form-control {
-            background: #0D1117 !important;
-            border: 1px solid #30363D !important;
-            color: #E6EDF3 !important;
-            border-radius: 8px !important;
+            background: #0D1117 !important; border: 1px solid #30363D !important;
+            color: #E6EDF3 !important; border-radius: 8px !important; font-size: 16px !important;
         }
         .form-control:focus {
-            background: #0D1117 !important;
-            border-color: #1A73E8 !important;
-            box-shadow: 0 0 0 0.2rem rgba(26,115,232,0.25) !important;
-            color: #E6EDF3 !important;
+            background: #0D1117 !important; border-color: #1A73E8 !important;
+            box-shadow: 0 0 0 0.2rem rgba(26,115,232,0.25) !important; color: #E6EDF3 !important;
         }
         .form-control::placeholder { color: #8B949E !important; }
         select.form-control option { background: #161B22; }
 
-        /* ── Flash Messages ── */
+        /* ── Flash ── */
         .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 10px;
             border: 1px solid transparent; font-size: 0.875rem; display: flex;
             align-items: center; justify-content: space-between; }
@@ -190,78 +209,105 @@
         .alert-danger  { background: rgba(248,81,73,0.1);  border-color: #F85149; color: #F85149; }
         .alert-warning { background: rgba(245,158,11,0.1); border-color: #F59E0B; color: #F59E0B; }
         .alert-info    { background: rgba(26,115,232,0.1); border-color: #1A73E8; color: #1A73E8; }
-        .alert .close  { background: none; border: none; color: inherit; cursor: pointer;
-            font-size: 1.1rem; line-height: 1; opacity: 0.7; }
+        .alert .close  { background: none; border: none; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; opacity: 0.7; }
         .alert .close:hover { opacity: 1; }
 
-        /* Bootstrap Modal dark override */
-        .modal-content {
-            background: #161B22 !important; border: 1px solid #30363D !important; color: #E6EDF3 !important;
-        }
-        .modal-header { border-bottom: 1px solid #30363D !important; }
-        .modal-footer { border-top: 1px solid #30363D !important; }
-        .modal-title { color: #E6EDF3 !important; }
+        /* ── Modal dark ── */
+        .modal-content { background: #161B22 !important; border: 1px solid #30363D !important; color: #E6EDF3 !important; }
+        .modal-header  { border-bottom: 1px solid #30363D !important; }
+        .modal-footer  { border-top: 1px solid #30363D !important; }
+        .modal-title   { color: #E6EDF3 !important; }
         .modal-header .close { color: #8B949E !important; opacity: 1; }
         .modal-header .close:hover { color: #E6EDF3 !important; }
 
-        /* Table inside card override */
+        /* Bootstrap table/card overrides */
         .table { color: #C9D1D9 !important; }
         .table th { color: #8B949E !important; border-color: #30363D !important; background: #21262D !important; }
         .table td { border-color: #21262D !important; }
-        .table-bordered { border-color: #30363D !important; }
-        .table-bordered td, .table-bordered th { border-color: #30363D !important; }
+        .table-bordered, .table-bordered td, .table-bordered th { border-color: #30363D !important; }
         .table-responsive { background: transparent; }
-
-        /* Card override */
         .card { background: #161B22 !important; border: 1px solid #30363D !important; color: #E6EDF3 !important; }
         .card-header { background: #21262D !important; border-bottom: 1px solid #30363D !important; color: #E6EDF3 !important; }
         .card-body { background: #161B22 !important; }
 
-        /* List items */
-        .t-list-item {
-            display: flex; align-items: center; padding: 12px 0;
-            border-bottom: 1px solid #21262D;
-        }
+        /* ── Misc ── */
+        .t-list-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #21262D; }
         .t-list-item:last-child { border-bottom: none; }
-
-        /* Avatar */
         .t-avatar { width: 36px; height: 36px; border-radius: 50%;
             background: linear-gradient(135deg,#1A73E8,#8B5CF6);
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0; }
-
-        /* Quick Actions */
         .t-quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-
-        /* Scrollbar */
+        .dropdown-menu { background: #161B22 !important; border: 1px solid #30363D !important; }
+        .dropdown-item { color: #C9D1D9 !important; }
+        .dropdown-item:hover { background: #1C2333 !important; color: #E6EDF3 !important; }
+        .badge { font-size: 0.72rem; }
+        .collapse-item { color: #C9D1D9 !important; background: #161B22 !important; }
+        .collapse-item:hover { background: #1C2333 !important; color: #E6EDF3 !important; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0D1117; }
         ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
 
-        /* Responsive */
+        /* ══════════════════
+           MOBILE BOTTOM NAV
+        ══════════════════ */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #161B22; border-top: 1px solid #30363D;
+            z-index: 300; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .mobile-bottom-nav .mbn-inner {
+            display: flex; align-items: stretch; height: 58px;
+        }
+        .mobile-bottom-nav a {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 3px; color: #8B949E; text-decoration: none;
+            font-size: 0.6rem; font-weight: 700; transition: color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-bottom-nav a i { font-size: 1.05rem; }
+        .mobile-bottom-nav a.active,
+        .mobile-bottom-nav a:hover { color: #1A73E8; text-decoration: none; }
+
+        /* ══════════════════
+           RESPONSIVE
+        ══════════════════ */
         @media (max-width: 992px) {
             .t-stats { grid-template-columns: 1fr 1fr; }
             .t-grid-2, .t-grid-3, .t-grid-4 { grid-template-columns: 1fr; }
         }
+
         @media (max-width: 768px) {
+            /* Sidebar hides off-screen; JS adds .open class to show it */
             .t-sidebar { transform: translateX(-100%); }
-            .t-topbar, .t-content { margin-left: 0; }
-            .t-stats { grid-template-columns: 1fr 1fr; }
+            .t-sidebar.open { transform: translateX(0); box-shadow: 8px 0 30px rgba(0,0,0,0.5); }
+
+            .t-topbar { margin-left: 0; padding: 0 14px; }
+            .t-topbar .t-role-badge { display: none; }
+            .t-content { margin-left: 0; padding: 16px 14px 76px; }
+
+            .t-hamburger { display: flex; }
+            .mobile-bottom-nav { display: block; }
+
+            .t-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .t-stat-card { padding: 14px 12px; }
+            .t-stat-value { font-size: 1.35rem; }
+            .t-stat-icon { font-size: 1.3rem; }
+
+            /* Hide username text to save space */
+            .t-user-badge span { display: none; }
+            .t-user-badge { padding: 5px 8px; }
+
+            .t-table { font-size: 0.78rem; }
+            .t-table th, .t-table td { padding: 8px 8px; }
         }
 
-        /* Dropdown */
-        .dropdown-menu {
-            background: #161B22 !important; border: 1px solid #30363D !important;
+        @media (max-width: 420px) {
+            .t-content { padding: 12px 12px 76px; }
+            .t-btn { font-size: 0.78rem; padding: 7px 10px; }
+            .t-btn-sm { font-size: 0.7rem; padding: 5px 8px; }
         }
-        .dropdown-item { color: #C9D1D9 !important; }
-        .dropdown-item:hover { background: #1C2333 !important; color: #E6EDF3 !important; }
-
-        /* Badges bootstrap override */
-        .badge { font-size: 0.72rem; }
-
-        /* Collapse */
-        .collapse-item { color: #C9D1D9 !important; background: #161B22 !important; }
-        .collapse-item:hover { background: #1C2333 !important; color: #E6EDF3 !important; }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -269,24 +315,28 @@
 
 <body>
 
+<!-- Sidebar backdrop overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
 <!-- ── Sidebar ── -->
-<nav class="t-sidebar">
+<nav class="t-sidebar" id="mainSidebar">
     <a class="t-sidebar-brand" href="{{ url_for('trainer_dashboard') if current_user.role == 'trainer' else url_for('dashboard') }}">
         <i class="fas fa-dumbbell"></i> GYM SYSTEM
     </a>
 
     <div class="t-sidebar-section">Main</div>
     <a href="{{ url_for('trainer_dashboard') if current_user.role == 'trainer' else url_for('dashboard') }}"
-       class="nav-link-item {% if request.endpoint in ['dashboard','trainer_dashboard'] %}active{% endif %}">
+       class="nav-link-item {% if request.endpoint in ['dashboard','trainer_dashboard'] %}active{% endif %}"
+       onclick="closeSidebar()">
         <i class="fas fa-tachometer-alt"></i> Dashboard
     </a>
 
     {% if current_user.role == 'admin' %}
     <div class="t-sidebar-section">Management</div>
-    <a href="{{ url_for('members') }}" class="nav-link-item {% if request.endpoint == 'members' %}active{% endif %}">
+    <a href="{{ url_for('members') }}" class="nav-link-item {% if request.endpoint == 'members' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-users"></i> Members
     </a>
-    <a href="{{ url_for('trainers') }}" class="nav-link-item {% if request.endpoint == 'trainers' %}active{% endif %}">
+    <a href="{{ url_for('trainers') }}" class="nav-link-item {% if request.endpoint == 'trainers' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-user-tie"></i> Trainers
     </a>
     {% endif %}
@@ -295,35 +345,35 @@
     {% if current_user.role == 'trainer' %}
     <div class="t-sidebar-section">Manage</div>
     {% endif %}
-    <a href="{{ url_for('classes') }}" class="nav-link-item {% if request.endpoint == 'classes' %}active{% endif %}">
+    <a href="{{ url_for('classes') }}" class="nav-link-item {% if request.endpoint == 'classes' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-calendar-alt"></i> Classes
     </a>
-    <a href="{{ url_for('attendance') }}" class="nav-link-item {% if request.endpoint == 'attendance' %}active{% endif %}">
+    <a href="{{ url_for('attendance') }}" class="nav-link-item {% if request.endpoint == 'attendance' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-calendar-check"></i> Attendance
     </a>
-    <a href="{{ url_for('workouts') }}" class="nav-link-item {% if request.endpoint == 'workouts' %}active{% endif %}">
+    <a href="{{ url_for('workouts') }}" class="nav-link-item {% if request.endpoint == 'workouts' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-running"></i> Workouts
     </a>
-    <a href="{{ url_for('nutrition') }}" class="nav-link-item {% if request.endpoint == 'nutrition' %}active{% endif %}">
+    <a href="{{ url_for('nutrition') }}" class="nav-link-item {% if request.endpoint == 'nutrition' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-apple-alt"></i> Nutrition
     </a>
-    <a href="{{ url_for('progress') }}" class="nav-link-item {% if request.endpoint == 'progress' %}active{% endif %}">
+    <a href="{{ url_for('progress') }}" class="nav-link-item {% if request.endpoint == 'progress' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-chart-line"></i> Progress
     </a>
     {% endif %}
 
     {% if current_user.role == 'admin' %}
-    <a href="{{ url_for('payments') }}" class="nav-link-item {% if request.endpoint == 'payments' %}active{% endif %}">
+    <a href="{{ url_for('payments') }}" class="nav-link-item {% if request.endpoint == 'payments' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-money-bill-wave"></i> Payments
     </a>
     <div class="t-sidebar-section">Reports</div>
-    <a href="{{ url_for('reports') }}" class="nav-link-item {% if request.endpoint == 'reports' %}active{% endif %}">
+    <a href="{{ url_for('reports') }}" class="nav-link-item {% if request.endpoint == 'reports' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-chart-bar"></i> Reports
     </a>
     {% endif %}
 
     <div class="t-sidebar-section">Other</div>
-    <a href="{{ url_for('settings') }}" class="nav-link-item {% if request.endpoint == 'settings' %}active{% endif %}">
+    <a href="{{ url_for('settings') }}" class="nav-link-item {% if request.endpoint == 'settings' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fas fa-cog"></i> Settings
     </a>
 
@@ -336,23 +386,26 @@
 
 <!-- ── Topbar ── -->
 <nav class="t-topbar">
+    <div class="t-topbar-left">
+        <button class="t-hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
     <div class="t-topbar-right">
         {% if current_user.role == 'admin' %}
-        <span class="t-role-badge admin-badge"><i class="fas fa-shield-alt mr-1"></i>Admin</span>
+        <span class="t-role-badge admin-badge"><i class="fas fa-shield-alt" style="margin-right:4px;"></i>Admin</span>
         {% else %}
-        <span class="t-role-badge"><i class="fas fa-user-tie mr-1"></i>Trainer</span>
+        <span class="t-role-badge"><i class="fas fa-user-tie" style="margin-right:4px;"></i>Trainer</span>
         {% endif %}
         <div class="t-user-badge">
             <img src="{{ url_for('static', filename='img/undraw_profile.svg') }}" alt="Profile">
-            {{ current_user.username }}
+            <span>{{ current_user.username }}</span>
         </div>
     </div>
 </nav>
 
 <!-- ── Main Content ── -->
 <div class="t-content">
-
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -367,9 +420,75 @@
     {% block content %}{% endblock %}
 </div>
 
+<!-- ── Mobile Bottom Navigation ── -->
+<nav class="mobile-bottom-nav">
+    <div class="mbn-inner">
+        <a href="{{ url_for('trainer_dashboard') if current_user.role == 'trainer' else url_for('dashboard') }}"
+           class="{% if request.endpoint in ['dashboard','trainer_dashboard'] %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i><span>Home</span>
+        </a>
+        {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('members') }}" class="{% if request.endpoint == 'members' %}active{% endif %}">
+            <i class="fas fa-users"></i><span>Members</span>
+        </a>
+        <a href="{{ url_for('payments') }}" class="{% if request.endpoint == 'payments' %}active{% endif %}">
+            <i class="fas fa-money-bill-wave"></i><span>Payments</span>
+        </a>
+        <a href="{{ url_for('attendance') }}" class="{% if request.endpoint == 'attendance' %}active{% endif %}">
+            <i class="fas fa-calendar-check"></i><span>Attend.</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('attendance') }}" class="{% if request.endpoint == 'attendance' %}active{% endif %}">
+            <i class="fas fa-calendar-check"></i><span>Attend.</span>
+        </a>
+        <a href="{{ url_for('workouts') }}" class="{% if request.endpoint == 'workouts' %}active{% endif %}">
+            <i class="fas fa-running"></i><span>Workouts</span>
+        </a>
+        <a href="{{ url_for('classes') }}" class="{% if request.endpoint == 'classes' %}active{% endif %}">
+            <i class="fas fa-calendar-alt"></i><span>Classes</span>
+        </a>
+        {% endif %}
+        <a href="javascript:void(0)" onclick="toggleSidebar()">
+            <i class="fas fa-th-large"></i><span>More</span>
+        </a>
+    </div>
+</nav>
+
 <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+
+<script>
+function toggleSidebar() {
+    var sidebar = document.getElementById('mainSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar.classList.contains('open')) {
+        closeSidebar();
+    } else {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeSidebar() {
+    var sidebar = document.getElementById('mainSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close sidebar when resized to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) closeSidebar();
+});
+
+// Escape key closes sidebar
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSidebar();
+});
+</script>
 
 {% block extra_js %}{% endblock %}
 

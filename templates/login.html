@@ -1,93 +1,253 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0D1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gym System">
     <title>Login - Gym Management System</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+        body {
+            background: #0D1117;
+            color: #E6EDF3;
+            font-family: 'Nunito', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* ── Brand header ── */
+        .login-brand {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .login-brand-icon {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, #1A73E8, #8B5CF6);
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.6rem; color: #fff;
+            box-shadow: 0 8px 24px rgba(26,115,232,0.3);
+        }
+        .login-brand h1 {
+            font-size: 1.5rem; font-weight: 900; color: #E6EDF3; margin-bottom: 6px;
+        }
+        .login-brand p {
+            font-size: 0.85rem; color: #8B949E;
+        }
+
+        /* ── Card ── */
+        .login-card {
+            background: #161B22;
+            border: 1px solid #30363D;
+            border-radius: 16px;
+            padding: 32px 28px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+        }
+
+        /* ── Flash messages ── */
+        .alert {
+            padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid transparent; font-size: 0.875rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .alert-danger  { background: rgba(248,81,73,0.1);  border-color: #F85149; color: #F85149; }
+        .alert-warning { background: rgba(245,158,11,0.1); border-color: #F59E0B; color: #F59E0B; }
+        .alert-success { background: rgba(16,185,129,0.1); border-color: #10B981; color: #10B981; }
+        .alert-info    { background: rgba(26,115,232,0.1); border-color: #1A73E8; color: #1A73E8; }
+        .alert .close  { background: none; border: none; color: inherit; cursor: pointer; font-size: 1rem; opacity: 0.7; flex-shrink: 0; }
+
+        /* ── Form ── */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; font-size: 0.82rem; font-weight: 700;
+            color: #8B949E; margin-bottom: 8px; letter-spacing: 0.3px;
+        }
+
+        .input-wrap { position: relative; }
+        .input-wrap .input-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #8B949E; font-size: 0.9rem; pointer-events: none;
+        }
+        .input-wrap input {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            background: #0D1117;
+            border: 1px solid #30363D;
+            border-radius: 10px;
+            color: #E6EDF3;
+            font-size: 16px; /* prevents iOS zoom */
+            font-family: 'Nunito', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            -webkit-appearance: none;
+        }
+        .input-wrap input:focus {
+            outline: none;
+            border-color: #1A73E8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
+        }
+        .input-wrap input::placeholder { color: #8B949E; }
+
+        /* ── Remember me ── */
+        .remember-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 24px; flex-wrap: wrap; gap: 10px;
+        }
+        .remember-row label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.82rem; color: #8B949E; cursor: pointer;
+        }
+        .remember-row input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: #1A73E8; cursor: pointer;
+        }
+        .forgot-link {
+            font-size: 0.82rem; color: #1A73E8; text-decoration: none; font-weight: 600;
+        }
+        .forgot-link:hover { color: #60A5FA; text-decoration: underline; }
+
+        /* ── Submit button ── */
+        .btn-login {
+            width: 100%; padding: 13px;
+            background: #1A73E8;
+            color: #fff; font-size: 0.95rem; font-weight: 800;
+            border: none; border-radius: 10px; cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(26,115,232,0.3);
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+        }
+        .btn-login:hover  { background: #1557B0; box-shadow: 0 6px 20px rgba(26,115,232,0.4); }
+        .btn-login:active { transform: scale(0.98); }
+
+        /* ── Divider ── */
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 24px 0; color: #8B949E; font-size: 0.78rem;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: #30363D;
+        }
+
+        /* ── Footer links ── */
+        .login-footer { text-align: center; margin-top: 20px; }
+        .login-footer a {
+            color: #1A73E8; text-decoration: none; font-size: 0.85rem; font-weight: 600;
+        }
+        .login-footer a:hover { color: #60A5FA; text-decoration: underline; }
+        .login-footer p { color: #8B949E; font-size: 0.82rem; margin-bottom: 8px; }
+
+        /* ── Demo credentials hint ── */
+        .demo-hint {
+            background: rgba(26,115,232,0.06);
+            border: 1px solid rgba(26,115,232,0.15);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-top: 20px;
+            font-size: 0.78rem;
+            color: #8B949E;
+            line-height: 1.6;
+        }
+        .demo-hint strong { color: #C9D1D9; }
+
+        @media (max-width: 480px) {
+            body { padding: 16px; align-items: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 40px); }
+            .login-card { padding: 24px 20px; border-radius: 14px; }
+            .login-brand { margin-bottom: 24px; }
+            .login-brand h1 { font-size: 1.3rem; }
+        }
+    </style>
 </head>
+<body>
 
-<body class="bg-gradient-primary">
+<div class="login-wrapper">
 
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-xl-10 col-lg-12 col-md-9">
-                <div class="card o-hidden border-0 shadow-lg my-5">
-                    <div class="card-body p-0">
-                        <div class="row">
-                            <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
-                            <div class="col-lg-6">
-                                <div class="p-5">
-                                    <div class="text-center">
-                                        <h1 class="h4 text-gray-900 mb-4">Welcome Back!</h1>
-                                    </div>
-
-                                    <!-- Flash Messages -->
-                                    {% with messages = get_flashed_messages(with_categories=true) %}
-                                        {% if messages %}
-                                            {% for category, message in messages %}
-                                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                                    {{ message }}
-                                                    <button type="button" class="close" data-dismiss="alert">
-                                                        <span>&times;</span>
-                                                    </button>
-                                                </div>
-                                            {% endfor %}
-                                        {% endif %}
-                                    {% endwith %}
-
-                                    <!-- Login Form -->
-                                    <form method="POST" action="{{ url_for('login') }}" class="user">
-                                        <div class="form-group">
-                                            <input type="email"
-                                                class="form-control form-control-user"
-                                                name="email"
-                                                placeholder="Enter Email Address..."
-                                                required>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="password"
-                                                class="form-control form-control-user"
-                                                name="password"
-                                                placeholder="Password"
-                                                required>
-                                        </div>
-                                        <div class="form-group">
-                                            <div class="custom-control custom-checkbox small">
-                                                <input type="checkbox" class="custom-control-input" id="customCheck">
-                                                <label class="custom-control-label" for="customCheck">Remember Me</label>
-                                            </div>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary btn-user btn-block">
-                                            <i class="fas fa-sign-in-alt"></i> Login
-                                        </button>
-                                    </form>
-
-                                    <hr>
-                                    <div class="text-center">
-                                        <a class="small" href="{{ url_for('forgot_password') }}">Forgot Password?</a>
-                                    </div>
-                                    <div class="text-center">
-                                        <a class="small" href="{{ url_for('register') }}">Create an Account!</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Brand -->
+    <div class="login-brand">
+        <div class="login-brand-icon">
+            <i class="fas fa-dumbbell"></i>
         </div>
+        <h1>GYM SYSTEM</h1>
+        <p>Sign in to your account</p>
     </div>
 
-    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+    <!-- Card -->
+    <div class="login-card">
 
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <span>{{ message }}</span>
+                    <button class="close" onclick="this.parentElement.remove()">×</button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Login form -->
+        <form method="POST" action="{{ url_for('login') }}">
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-wrap">
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" id="email" name="email"
+                           placeholder="you@example.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrap">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="password" name="password"
+                           placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+            </div>
+
+            <div class="remember-row">
+                <label>
+                    <input type="checkbox" name="remember"> Remember me
+                </label>
+                <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+
+        </form>
+
+        <div class="divider">or</div>
+
+        <div class="login-footer">
+            <p>Don't have an account?</p>
+            <a href="{{ url_for('register') }}">Create an account</a>
+        </div>
+
+      
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 </body>
 </html>

@@ -1,102 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0D1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Register - Gym Management System</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <title>SB Admin 2 - Register</title>
+        body {
+            background: #0D1117;
+            color: #E6EDF3;
+            font-family: 'Nunito', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
 
-    <!-- Custom fonts for this template-->
-    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
-    <link
-        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
-        rel="stylesheet">
+        .register-wrapper {
+            width: 100%;
+            max-width: 460px;
+        }
 
-    <!-- Custom styles for this template-->
-    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+        /* ── Brand ── */
+        .register-brand {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .register-brand-icon {
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, #1A73E8, #8B5CF6);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 14px;
+            font-size: 1.4rem; color: #fff;
+            box-shadow: 0 8px 24px rgba(26,115,232,0.3);
+        }
+        .register-brand h1 { font-size: 1.4rem; font-weight: 900; color: #E6EDF3; margin-bottom: 6px; }
+        .register-brand p  { font-size: 0.85rem; color: #8B949E; }
 
+        /* ── Card ── */
+        .register-card {
+            background: #161B22;
+            border: 1px solid #30363D;
+            border-radius: 16px;
+            padding: 30px 28px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+        }
+
+        /* ── Flash ── */
+        .alert {
+            padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid transparent; font-size: 0.875rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .alert-danger  { background: rgba(248,81,73,0.1);  border-color: #F85149; color: #F85149; }
+        .alert-warning { background: rgba(245,158,11,0.1); border-color: #F59E0B; color: #F59E0B; }
+        .alert-success { background: rgba(16,185,129,0.1); border-color: #10B981; color: #10B981; }
+        .alert .close  { background: none; border: none; color: inherit; cursor: pointer; font-size: 1rem; opacity: 0.7; flex-shrink: 0; }
+
+        /* ── Form ── */
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block; font-size: 0.82rem; font-weight: 700;
+            color: #8B949E; margin-bottom: 8px; letter-spacing: 0.3px;
+        }
+        .form-group label span { color: #F85149; }
+
+        .input-wrap { position: relative; }
+        .input-wrap .input-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #8B949E; font-size: 0.85rem; pointer-events: none;
+        }
+        .input-wrap input,
+        .input-wrap select {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            background: #0D1117;
+            border: 1px solid #30363D;
+            border-radius: 10px;
+            color: #E6EDF3;
+            font-size: 16px; /* prevent iOS zoom */
+            font-family: 'Nunito', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            -webkit-appearance: none;
+        }
+        .input-wrap input:focus,
+        .input-wrap select:focus {
+            outline: none;
+            border-color: #1A73E8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
+        }
+        .input-wrap input::placeholder { color: #8B949E; }
+        .input-wrap select option { background: #161B22; }
+
+        /* Two-column row */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* ── Role selector cards ── */
+        .role-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+        .role-option { display: none; }
+        .role-label {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 6px; padding: 14px 8px;
+            background: #0D1117; border: 2px solid #30363D; border-radius: 10px;
+            cursor: pointer; transition: all 0.2s; text-align: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .role-label i { font-size: 1.2rem; color: #8B949E; transition: color 0.2s; }
+        .role-label span { font-size: 0.75rem; font-weight: 700; color: #8B949E; transition: color 0.2s; }
+        .role-option:checked + .role-label {
+            border-color: #1A73E8;
+            background: rgba(26,115,232,0.08);
+        }
+        .role-option:checked + .role-label i,
+        .role-option:checked + .role-label span { color: #1A73E8; }
+
+        /* ── Password strength indicator ── */
+        .strength-bar {
+            height: 4px; border-radius: 2px; background: #21262D;
+            margin-top: 8px; overflow: hidden;
+        }
+        .strength-fill {
+            height: 100%; border-radius: 2px;
+            transition: width 0.3s, background 0.3s;
+            width: 0%;
+        }
+        .strength-text { font-size: 0.72rem; color: #8B949E; margin-top: 4px; }
+
+        /* ── Submit ── */
+        .btn-register {
+            width: 100%; padding: 13px;
+            background: linear-gradient(135deg, #1A73E8, #8B5CF6);
+            color: #fff; font-size: 0.95rem; font-weight: 800;
+            border: none; border-radius: 10px; cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 4px 16px rgba(26,115,232,0.3);
+            margin-top: 6px;
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+        }
+        .btn-register:hover  { opacity: 0.9; }
+        .btn-register:active { transform: scale(0.98); }
+
+        /* ── Divider ── */
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 22px 0; color: #8B949E; font-size: 0.78rem;
+        }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #30363D; }
+
+        /* ── Footer ── */
+        .register-footer { text-align: center; }
+        .register-footer a { color: #1A73E8; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .register-footer a:hover { color: #60A5FA; text-decoration: underline; }
+        .register-footer p { color: #8B949E; font-size: 0.82rem; margin-bottom: 8px; }
+
+        /* ── Terms note ── */
+        .terms-note {
+            font-size: 0.75rem; color: #8B949E; text-align: center;
+            margin-top: 16px; line-height: 1.6;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 16px; align-items: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 30px); }
+            .register-card { padding: 24px 18px; border-radius: 14px; }
+            .register-brand { margin-bottom: 20px; }
+            .form-row { grid-template-columns: 1fr; gap: 0; }
+        }
+    </style>
 </head>
+<body>
 
-<body class="bg-gradient-primary">
+<div class="register-wrapper">
 
-    <div class="container">
+    <!-- Brand -->
+    <div class="register-brand">
+        <div class="register-brand-icon">
+            <i class="fas fa-dumbbell"></i>
+        </div>
+        <h1>Create Account</h1>
+        <p>Join the Gym Management System</p>
+    </div>
 
-        <div class="card o-hidden border-0 shadow-lg my-5">
-            <div class="card-body p-0">
-                <!-- Nested Row within Card Body -->
-                <div class="row">
-                    <div class="col-lg-5 d-none d-lg-block bg-register-image"></div>
-                    <div class="col-lg-7">
-                        <div class="p-5">
-                            <div class="text-center">
-                                <h1 class="h4 text-gray-900 mb-4">Create an Account!</h1>
-                            </div>
-                            <form class="user">
-                                <div class="form-group row">
-                                    <div class="col-sm-6 mb-3 mb-sm-0">
-                                        <input type="text" class="form-control form-control-user" id="exampleFirstName"
-                                            placeholder="First Name">
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <input type="text" class="form-control form-control-user" id="exampleLastName"
-                                            placeholder="Last Name">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <input type="email" class="form-control form-control-user" id="exampleInputEmail"
-                                        placeholder="Email Address">
-                                </div>
-                                <div class="form-group row">
-                                    <div class="col-sm-6 mb-3 mb-sm-0">
-                                        <input type="password" class="form-control form-control-user"
-                                            id="exampleInputPassword" placeholder="Password">
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <input type="password" class="form-control form-control-user"
-                                            id="exampleRepeatPassword" placeholder="Repeat Password">
-                                    </div>
-                                </div>
-                                <a href="login.html" class="btn btn-primary btn-user btn-block">
-                                    Register Account
-                                </a>
-                                <hr>
-                                <a href="index.html" class="btn btn-google btn-user btn-block">
-                                    <i class="fab fa-google fa-fw"></i> Register with Google
-                                </a>
-                                <a href="index.html" class="btn btn-facebook btn-user btn-block">
-                                    <i class="fab fa-facebook-f fa-fw"></i> Register with Facebook
-                                </a>
-                            </form>
-                            <hr>
-                            <div class="text-center">
-                                <a class="small" href="forgot-password.html">Forgot Password?</a>
-                            </div>
-                            <div class="text-center">
-                                <a class="small" href="login.html">Already have an account? Login!</a>
-                            </div>
-                        </div>
+    <!-- Card -->
+    <div class="register-card">
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <span>{{ message }}</span>
+                    <button class="close" onclick="this.parentElement.remove()">×</button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('register') }}">
+
+            <!-- Name -->
+            <div class="form-group">
+                <label for="username">Full Name <span>*</span></label>
+                <div class="input-wrap">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" id="username" name="username"
+                           placeholder="e.g. Jane Wanjiku" required autocomplete="name">
+                </div>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label for="email">Email Address <span>*</span></label>
+                <div class="input-wrap">
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" id="email" name="email"
+                           placeholder="you@example.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <!-- Password row -->
+            <div class="form-row">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="password">Password <span>*</span></label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="password" name="password"
+                               placeholder="Create password" required
+                               autocomplete="new-password"
+                               oninput="checkStrength(this.value)">
+                    </div>
+                    <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                    <div class="strength-text" id="strengthText"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="confirm_password">Confirm <span>*</span></label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                               placeholder="Repeat password" required
+                               autocomplete="new-password"
+                               oninput="checkMatch()">
+                    </div>
+                    <div class="strength-text" id="matchText"></div>
+                </div>
+            </div>
+
+            <!-- Role -->
+            <div class="form-group" style="margin-top:18px;">
+                <label>Account Role <span>*</span></label>
+                <div class="role-selector">
+                    <div>
+                        <input type="radio" name="role" id="role_member" value="member" class="role-option" checked>
+                        <label for="role_member" class="role-label">
+                            <i class="fas fa-dumbbell"></i>
+                            <span>Member</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" name="role" id="role_trainer" value="trainer" class="role-option">
+                        <label for="role_trainer" class="role-label">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Trainer</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" name="role" id="role_admin" value="admin" class="role-option">
+                        <label for="role_admin" class="role-label">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Admin</span>
+                        </label>
                     </div>
                 </div>
             </div>
+
+            <button type="submit" class="btn-register">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+
+        </form>
+
+        <div class="divider">or</div>
+
+        <div class="register-footer">
+            <p>Already have an account?</p>
+            <a href="{{ url_for('login') }}">Sign in instead</a>
         </div>
 
+        <p class="terms-note">
+            By creating an account you agree to our terms of service and privacy policy.
+        </p>
+
     </div>
+</div>
 
-    <!-- Bootstrap core JavaScript-->
-    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script>
+function checkStrength(val) {
+    var fill = document.getElementById('strengthFill');
+    var text = document.getElementById('strengthText');
+    var score = 0;
+    if (val.length >= 6)  score++;
+    if (val.length >= 10) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
 
-    <!-- Core plugin JavaScript-->
-    <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+    var colors = ['#F85149','#F59E0B','#F59E0B','#10B981','#10B981'];
+    var labels = ['Too short','Weak','Fair','Strong','Very strong'];
+    var widths = ['20%','40%','60%','80%','100%'];
 
-    <!-- Custom scripts for all pages-->
-    <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+    if (val.length === 0) { fill.style.width='0%'; text.textContent=''; return; }
+    var idx = Math.min(score - 1, 4);
+    if (idx < 0) idx = 0;
+    fill.style.width  = widths[idx];
+    fill.style.background = colors[idx];
+    text.textContent  = labels[idx];
+    text.style.color  = colors[idx];
+}
 
+function checkMatch() {
+    var pw  = document.getElementById('password').value;
+    var cpw = document.getElementById('confirm_password').value;
+    var txt = document.getElementById('matchText');
+    if (cpw.length === 0) { txt.textContent = ''; return; }
+    if (pw === cpw) {
+        txt.textContent = '✓ Passwords match';
+        txt.style.color = '#10B981';
+    } else {
+        txt.textContent = '✗ Passwords do not match';
+        txt.style.color = '#F85149';
+    }
+}
+</script>
 </body>
-
 </html>
