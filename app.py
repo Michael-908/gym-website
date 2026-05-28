@@ -18,13 +18,17 @@ app = Flask(__name__)
 load_dotenv()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
+# ── Configuration ─────────────────────────────────────────────────────────────
 app.config['SECRET_KEY']                  = 'gymapp-secret-key-2026'
-import os
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///gym.db')
+
+# Get the database URL from Render, fallback to local SQLite if it doesn't exist
 database_url = os.getenv('DATABASE_URL', 'sqlite:///gym.db')
-if database_url.startswith('postgres://'):
+
+# Fix Render's legacy 'postgres://' prefix for SQLAlchemy 1.4+ compatibility
+if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
+app.config['SQLALCHEMY_DATABASE_URI']        = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SECURE']       = False
 app.config['SESSION_COOKIE_HTTPONLY']     = True
