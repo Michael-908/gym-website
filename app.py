@@ -13,12 +13,18 @@ from datetime import datetime, timedelta, date, timezone  # Added timezone here
 from fpdf import FPDF
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature  # Added for password resets
 
+
 app = Flask(__name__)
 load_dotenv()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 app.config['SECRET_KEY']                  = 'gymapp-secret-key-2026'
-app.config['SQLALCHEMY_DATABASE_URI']     = 'sqlite:///gym.db'
+import os
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///gym.db')
+database_url = os.getenv('DATABASE_URL', 'sqlite:///gym.db')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SECURE']       = False
 app.config['SESSION_COOKIE_HTTPONLY']     = True
