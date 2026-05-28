@@ -63,15 +63,38 @@ bcrypt = Bcrypt(app)
 mail   = Mail(app)
 
 # ── Init DB ───────────────────────────────────────────────────────────────────
-with app.app_context():
-    db.create_all()
-    if not MembershipPlan.query.first():
-        db.session.add_all([
-            MembershipPlan(name='Monthly',   price=3000.0,  duration_days=30),
-            MembershipPlan(name='Quarterly', price=8000.0,  duration_days=90),
-            MembershipPlan(name='Annual',    price=25000.0, duration_days=365),
-        ])
-        db.session.commit()
+is_initialized = False
+
+@app.before_request
+def initialize_database_once():
+    global is_initialized
+    if not is_initialized:
+        db.create_all()
+        
+        # Seed Admin Account if missing
+        if not User.query.filter_by(role='admin').first():
+            hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
+            db.session.add(User(
+                username='Admin', 
+                email='admin@gym.com',
+                password_hash=hashed, 
+                role='admin',
+                added_by_admin=False
+            ))
+            db.session.commit()
+            print('Default admin created: admin@gym.com / admin123 — Kinetix Gym')
+
+        # Seed Membership Plans if missing
+        if not MembershipPlan.query.first():
+            db.session.add_all([
+                MembershipPlan(name='Monthly',   price=3000.0,  duration_days=30),
+                MembershipPlan(name='Quarterly', price=8000.0,  duration_days=90),
+                MembershipPlan(name='Annual',    price=25000.0, duration_days=365),
+            ])
+            db.session.commit()
+            print('Default membership plans seeded.')
+            
+        is_initialized = True
 
 # ── Login Manager ─────────────────────────────────────────────────────────────
 login_manager = LoginManager(app)
@@ -1636,7 +1659,11 @@ def create_tables():
             db.session.commit()
             print('Default admin created: admin@gym.com / admin123 — Kinetix Gym')
 
-create_tables()
-
+@app.before_request
+def initialize_database_once():
+    global is_initialized
+    if not is_initialized:
+        create_tables()
+        is_initialized = True
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
