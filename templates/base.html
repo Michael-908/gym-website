@@ -8,9 +8,9 @@
     <meta name="theme-color" content="#161B22">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Gym System">
+    <meta name="apple-mobile-web-app-title" content="Kinetix Gym">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>{% block title %}Gym Management System{% endblock %}</title>
+    <title>{% block title %}Kinetix Gym{% endblock %}</title>
 
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900" rel="stylesheet">
@@ -321,7 +321,7 @@
 <!-- ── Sidebar ── -->
 <nav class="t-sidebar" id="mainSidebar">
     <a class="t-sidebar-brand" href="{{ url_for('trainer_dashboard') if current_user.role == 'trainer' else url_for('dashboard') }}">
-        <i class="fas fa-dumbbell"></i> GYM SYSTEM
+        <i class="fas fa-dumbbell"></i> KINETIX GYM
     </a>
 
     <div class="t-sidebar-section">Main</div>

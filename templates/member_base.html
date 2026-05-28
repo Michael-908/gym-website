@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#161B22">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Gym System">
+    <meta name="apple-mobile-web-app-title" content="Kinetix Gym">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>{% block title %}Gym Management System{% endblock %}</title>
+    <title>{% block title %}Kinetix Gym{% endblock %}</title>
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -60,6 +60,50 @@
             border-left-color: #F85149 !important;
         }
 
+
+        /* ── Locked nav items (unsubscribed members) ── */
+        .locked-nav {
+            opacity: 0.45;
+            cursor: pointer;
+            position: relative;
+        }
+        .locked-nav:hover {
+            color: #F59E0B !important;
+            border-left-color: #F59E0B !important;
+            background: rgba(245,158,11,0.08) !important;
+            opacity: 0.65;
+        }
+        .lock-icon {
+            margin-left: auto;
+            font-size: 0.65rem;
+            color: #F59E0B;
+            flex-shrink: 0;
+        }
+        .sub-required-badge {
+            margin-left: auto;
+            background: #F59E0B;
+            color: #000;
+            font-size: 0.58rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            flex-shrink: 0;
+        }
+
+        /* ── Subscription lock banner ── */
+        .sub-lock-banner {
+            background: linear-gradient(135deg,rgba(245,158,11,0.12),rgba(26,115,232,0.08));
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
         /* ══════════════════════════════════════
            SIDEBAR OVERLAY
         ══════════════════════════════════════ */
@@ -443,7 +487,7 @@
 <!-- ── Sidebar ── -->
 <nav class="m-sidebar" id="mainSidebar">
     <a class="m-sidebar-brand" href="{{ url_for('member_dashboard') }}">
-        <i class="fas fa-dumbbell"></i> GYM SYSTEM
+        <i class="fas fa-dumbbell"></i> KINETIX GYM
     </a>
 
     <div class="m-sidebar-section">Overview</div>
@@ -454,6 +498,8 @@
     </a>
 
     <div class="m-sidebar-section">My Fitness</div>
+
+    {% if has_subscription %}
     <a href="{{ url_for('my_workouts') }}"
        class="nav-link-item {% if request.endpoint in ['my_workouts','ai_suggest_workouts'] %}active{% endif %}"
        onclick="closeSidebar()">
@@ -474,12 +520,27 @@
        onclick="closeSidebar()">
         <i class="fas fa-calendar-check"></i> Attendance
     </a>
+    {% else %}
+    <a href="{{ url_for('my_payments') }}" class="nav-link-item locked-nav" title="Subscribe to unlock">
+        <i class="fas fa-running"></i> My Workouts <i class="fas fa-lock lock-icon"></i>
+    </a>
+    <a href="{{ url_for('my_payments') }}" class="nav-link-item locked-nav" title="Subscribe to unlock">
+        <i class="fas fa-apple-alt"></i> My Nutrition <i class="fas fa-lock lock-icon"></i>
+    </a>
+    <a href="{{ url_for('my_payments') }}" class="nav-link-item locked-nav" title="Subscribe to unlock">
+        <i class="fas fa-chart-line"></i> My Progress <i class="fas fa-lock lock-icon"></i>
+    </a>
+    <a href="{{ url_for('my_payments') }}" class="nav-link-item locked-nav" title="Subscribe to unlock">
+        <i class="fas fa-calendar-check"></i> Attendance <i class="fas fa-lock lock-icon"></i>
+    </a>
+    {% endif %}
 
     <div class="m-sidebar-section">Membership</div>
     <a href="{{ url_for('my_payments') }}"
        class="nav-link-item {% if request.endpoint == 'my_payments' %}active{% endif %}"
        onclick="closeSidebar()">
         <i class="fas fa-credit-card"></i> Payments
+        {% if not has_subscription %}<span class="sub-required-badge">Subscribe</span>{% endif %}
     </a>
     <a href="{{ url_for('trainer_profiles') }}"
        class="nav-link-item {% if request.endpoint == 'trainer_profiles' %}active{% endif %}"
@@ -540,6 +601,7 @@
            class="{% if request.endpoint == 'member_dashboard' %}active{% endif %}">
             <i class="fas fa-home"></i><span>Home</span>
         </a>
+        {% if has_subscription %}
         <a href="{{ url_for('my_workouts') }}"
            class="{% if request.endpoint in ['my_workouts','ai_suggest_workouts'] %}active{% endif %}">
             <i class="fas fa-running"></i><span>Workouts</span>
@@ -548,6 +610,14 @@
            class="{% if request.endpoint == 'my_progress' %}active{% endif %}">
             <i class="fas fa-chart-line"></i><span>Progress</span>
         </a>
+        {% else %}
+        <a href="{{ url_for('my_payments') }}" style="opacity:0.55;">
+            <i class="fas fa-lock"></i><span>Locked</span>
+        </a>
+        <a href="{{ url_for('my_payments') }}" style="opacity:0.55;">
+            <i class="fas fa-lock"></i><span>Locked</span>
+        </a>
+        {% endif %}
         <a href="{{ url_for('my_payments') }}"
            class="{% if request.endpoint == 'my_payments' %}active{% endif %}">
             <i class="fas fa-credit-card"></i><span>Pay</span>

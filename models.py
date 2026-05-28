@@ -7,12 +7,16 @@ db = SQLAlchemy()
 # Users table
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-    id            = db.Column(db.Integer, primary_key=True)
-    username      = db.Column(db.String(100), nullable=False)
-    email         = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)
-    role          = db.Column(db.String(20), nullable=False, default='member')
-    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    id               = db.Column(db.Integer, primary_key=True)
+    username         = db.Column(db.String(100), nullable=False)
+    email            = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash    = db.Column(db.String(200), nullable=False)
+    role             = db.Column(db.String(20), nullable=False, default='member')
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    # True = added by admin (full access); False = self-registered (locked until subscribed)
+    added_by_admin   = db.Column(db.Boolean, default=False, nullable=False)
+    reset_token      = db.Column(db.String(200), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
 
     member  = db.relationship('Member',  back_populates='user', uselist=False, cascade="all, delete-orphan")
     trainer = db.relationship('Trainer', back_populates='user', uselist=False, cascade="all, delete-orphan")

@@ -9,8 +9,9 @@ from models import (db, User, Member, Trainer, Workout, Nutrition, Attendance,
 from dotenv import load_dotenv
 from functools import wraps
 import os, stripe, requests, base64, json, io
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone  # Added timezone here
 from fpdf import FPDF
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature  # Added for password resets
 
 app = Flask(__name__)
 load_dotenv()
@@ -73,6 +74,18 @@ login_manager.session_protection     = 'basic'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+@app.context_processor
+def inject_subscription_status():
+    """Make subscription status available in all templates."""
+    if current_user.is_authenticated and current_user.role == 'member':
+        member = Member.query.filter_by(user_id=current_user.id).first()
+        subscribed = member_has_active_subscription(member) if member else False
+        return dict(
+            has_subscription=subscribed,
+            is_admin_member=current_user.added_by_admin
+        )
+    return dict(has_subscription=True, is_admin_member=False)
+
 # ── Role Decorators ───────────────────────────────────────────────────────────
 def admin_required(f):
     @wraps(f)
@@ -113,6 +126,152 @@ def smart_redirect():
         return redirect(url_for('trainer_dashboard'))
     else:
         return redirect(url_for('member_dashboard'))
+
+# ── Serialiser for password-reset tokens ─────────────────────────────────────
+def get_serializer():
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+# ── Email Helpers ─────────────────────────────────────────────────────────────
+def send_welcome_email(name, email, password=None):
+    """Send a welcome email to a new member."""
+    try:
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#0D1117;color:#E6EDF3;border-radius:12px;overflow:hidden;">
+          <div style="background:#1A73E8;padding:28px 32px;text-align:center;">
+            <h1 style="margin:0;color:#fff;font-size:1.6rem;">💪 Welcome to Kinetix Gym!</h1>
+          </div>
+          <div style="padding:32px;">
+            <p style="font-size:1rem;">Hi <strong>{name}</strong>,</p>
+            <p>We're thrilled to have you as part of the <strong>Kinetix Gym</strong> family. Your account has been created and you're all set to start your fitness journey with us!</p>
+            {"<p><strong>Your temporary password:</strong> <code style='background:#21262D;padding:4px 8px;border-radius:4px;'>" + password + "</code><br><small>Please change it after first login via Settings.</small></p>" if password else ""}
+            <p>Log in at any time to:</p>
+            <ul>
+              <li>Track your workouts &amp; progress</li>
+              <li>View your nutrition plans</li>
+              <li>Book gym classes</li>
+              <li>Manage your membership</li>
+            </ul>
+            <p style="margin-top:24px;color:#8B949E;font-size:0.85rem;">Stay fit, stay healthy — the Kinetix Gym team.</p>
+          </div>
+        </div>
+        """
+        msg = Message(
+            subject="Welcome to Kinetix Gym! 🏋️",
+            recipients=[email],
+            html=html,
+            sender=app.config.get('MAIL_USERNAME', 'noreply@kinetixgym.com')
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"Welcome email error: {e}")
+
+
+def send_subscription_receipt(member, payment, plan):
+    """Send a payment receipt email after successful subscription."""
+    try:
+        inv = payment.invoice_number or f"INV-{payment.id:05d}"
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#0D1117;color:#E6EDF3;border-radius:12px;overflow:hidden;">
+          <div style="background:#1A73E8;padding:28px 32px;text-align:center;">
+            <h1 style="margin:0;color:#fff;font-size:1.4rem;">🧾 Payment Receipt — Kinetix Gym</h1>
+          </div>
+          <div style="padding:32px;">
+            <p>Hi <strong>{member.name}</strong>, thank you for subscribing!</p>
+            <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+              <tr style="background:#21262D;">
+                <td style="padding:10px 14px;font-weight:bold;">Invoice</td>
+                <td style="padding:10px 14px;">{inv}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-weight:bold;">Plan</td>
+                <td style="padding:10px 14px;">{plan.name} ({plan.duration_days} days)</td>
+              </tr>
+              <tr style="background:#21262D;">
+                <td style="padding:10px 14px;font-weight:bold;">Amount Paid</td>
+                <td style="padding:10px 14px;color:#10B981;font-weight:bold;">KSh {payment.amount:,.2f}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-weight:bold;">Payment Method</td>
+                <td style="padding:10px 14px;">{(payment.method or "N/A").upper()}</td>
+              </tr>
+              <tr style="background:#21262D;">
+                <td style="padding:10px 14px;font-weight:bold;">Expiry Date</td>
+                <td style="padding:10px 14px;">{payment.expiry_date.strftime("%d %B %Y") if payment.expiry_date else "N/A"}</td>
+              </tr>
+              {"<tr><td style='padding:10px 14px;font-weight:bold;'>M-Pesa Receipt</td><td style='padding:10px 14px;'>" + payment.mpesa_receipt + "</td></tr>" if payment.mpesa_receipt else ""}
+            </table>
+            <p style="margin-top:24px;">All features are now unlocked. Enjoy your membership!</p>
+            <p style="color:#8B949E;font-size:0.85rem;">— Kinetix Gym Team</p>
+          </div>
+        </div>
+        """
+        msg = Message(
+            subject=f"Kinetix Gym — Payment Receipt ({inv})",
+            recipients=[member.email],
+            html=html,
+            sender=app.config.get('MAIL_USERNAME', 'noreply@kinetixgym.com')
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"Receipt email error: {e}")
+
+
+def send_password_reset_email(email, reset_url):
+    """Send a password-reset link email."""
+    try:
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#0D1117;color:#E6EDF3;border-radius:12px;overflow:hidden;">
+          <div style="background:#F85149;padding:28px 32px;text-align:center;">
+            <h1 style="margin:0;color:#fff;font-size:1.4rem;">🔑 Password Reset — Kinetix Gym</h1>
+          </div>
+          <div style="padding:32px;">
+            <p>We received a request to reset your Kinetix Gym password.</p>
+            <p>Click the button below to set a new password. This link expires in <strong>30 minutes</strong>.</p>
+            <div style="text-align:center;margin:28px 0;">
+              <a href="{reset_url}" style="background:#1A73E8;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:1rem;">Reset My Password</a>
+            </div>
+            <p style="font-size:0.85rem;color:#8B949E;">If you didn't request this, you can safely ignore this email. Your password will remain unchanged.</p>
+          </div>
+        </div>
+        """
+        msg = Message(
+            subject="Kinetix Gym — Password Reset Request",
+            recipients=[email],
+            html=html,
+            sender=app.config.get('MAIL_USERNAME', 'noreply@kinetixgym.com')
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"Reset email error: {e}")
+
+
+def member_has_active_subscription(member):
+    """Return True if member has a valid (non-expired) payment or was added by admin."""
+    if current_user.added_by_admin:
+        return True
+    if not member:
+        return False
+    today = date.today()
+    active = Payment.query.filter_by(member_id=member.id, status='completed').filter(
+        Payment.expiry_date >= today
+    ).first()
+    return active is not None
+
+
+def subscription_required(f):
+    """Lock routes for self-registered members who haven't subscribed yet."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'member':
+            return redirect(url_for('smart_redirect'))
+        if current_user.added_by_admin:
+            return f(*args, **kwargs)
+        member = Member.query.filter_by(user_id=current_user.id).first()
+        if not member_has_active_subscription(member):
+            flash('Please subscribe to a membership plan to access this feature.', 'warning')
+            return redirect(url_for('my_payments'))
+        return f(*args, **kwargs)
+    return decorated
 
 # ── M-Pesa Helpers ────────────────────────────────────────────────────────────
 def get_mpesa_token():
@@ -191,11 +350,11 @@ def generate_invoice_pdf(payment, member):
     pdf.set_text_color(26, 115, 232)
     pdf.set_font('Helvetica', 'B', 22)
     pdf.set_xy(10, 10)
-    pdf.cell(0, 10, 'GYM MANAGEMENT SYSTEM', ln=True)
+    pdf.cell(0, 10, 'KINETIX GYM', ln=True)
     pdf.set_text_color(139, 148, 158)
     pdf.set_font('Helvetica', '', 10)
     pdf.set_xy(10, 22)
-    pdf.cell(0, 8, 'Nairobi, Kenya  |  gym@example.com  |  +254 700 000 000', ln=True)
+    pdf.cell(0, 8, 'Nairobi, Kenya  |  info@kinetixgym.com  |  +254 700 000 000', ln=True)
 
     pdf.set_text_color(0, 0, 0)
     pdf.set_xy(10, 50)
@@ -283,7 +442,7 @@ def generate_invoice_pdf(payment, member):
     pdf.set_text_color(139, 148, 158)
     pdf.set_font('Helvetica', '', 9)
     pdf.ln(6)
-    pdf.cell(0, 6, 'Thank you for your membership. Stay fit, stay healthy!', ln=True, align='C')
+    pdf.cell(0, 6, 'Thank you for your membership. Stay fit, stay strong — Kinetix Gym!', ln=True, align='C')
     pdf.cell(0, 6, 'This is a computer-generated invoice and requires no signature.', ln=True, align='C')
 
     buf = io.BytesIO()
@@ -300,7 +459,7 @@ def get_ai_workout_suggestion(age, goal, fitness_level='Beginner', medical_notes
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        prompt = f"""You are a professional gym trainer in Nairobi, Kenya. Suggest 3 specific workout plans for a member with these details:
+        prompt = f"""You are a professional gym trainer at Kinetix Gym in Nairobi, Kenya. Suggest 3 specific workout plans for a member with these details:
 - Age: {age}
 - Fitness Goal: {goal}
 - Fitness Level: {fitness_level}
@@ -363,19 +522,77 @@ def register():
             flash('Email already registered.', 'warning')
             return redirect(url_for('login'))
         hashed   = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = User(username=username, email=email, password_hash=hashed, role=role)
+        new_user = User(username=username, email=email, password_hash=hashed, role=role,
+                        added_by_admin=False)
         db.session.add(new_user)
         db.session.flush()
         if role == 'member':
             db.session.add(Member(user_id=new_user.id, name=username, email=email))
         db.session.commit()
-        flash('Account created! You can now log in.', 'success')
+        send_welcome_email(username, email)
+        flash('Account created! A welcome email has been sent. You can now log in.', 'success')
         return redirect(url_for('login'))
     return render_template('register.html')
 
-@app.route('/forgot-password')
+@app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        user  = User.query.filter_by(email=email).first()
+        if user:
+            s     = get_serializer()
+            token = s.dumps(email, salt='password-reset')
+            user.reset_token        = token
+            # Modern, non-deprecated way to get a naive UTC datetime object
+            user.reset_token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
+            db.session.commit()
+            reset_url = url_for('reset_password', token=token, _external=True)
+            send_password_reset_email(email, reset_url)
+        
+        # Always show success to avoid email enumeration
+        flash('If that email is registered, a reset link has been sent. Check your inbox.', 'info')
+        return redirect(url_for('login'))
     return render_template('forgot-password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    s = get_serializer()
+    try:
+        # max_age=1800 enforces the 30-minute limit on the token itself
+        email = s.loads(token, salt='password-reset', max_age=1800)
+    except (SignatureExpired, BadSignature):
+        flash('The reset link is invalid or has expired. Please request a new one.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    # Verify the user exists and the token matches what is in the DB
+    user = User.query.filter_by(email=email, reset_token=token).first()
+    
+    # Extra safety check: verify database expiry time against current time
+    if not user or (user.reset_token_expiry and user.reset_token_expiry < datetime.now(timezone.utc).replace(tzinfo=None)):
+        flash('Invalid or expired reset link.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        new_pw  = request.form.get('new_password', '')
+        conf_pw = request.form.get('confirm_password', '')
+        
+        if len(new_pw) < 6:
+            flash('Password must be at least 6 characters.', 'danger')
+            return render_template('reset_password.html', token=token)
+        if new_pw != conf_pw:
+            flash('Passwords do not match.', 'danger')
+            return render_template('reset_password.html', token=token)
+            
+        # Update password and clear out the reset tokens so they can't be reused
+        user.password_hash      = bcrypt.generate_password_hash(new_pw).decode('utf-8')
+        user.reset_token        = None
+        user.reset_token_expiry = None
+        db.session.commit()
+        
+        flash('Password updated successfully! You can now log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ADMIN DASHBOARD
@@ -481,15 +698,16 @@ def member_dashboard():
     recent_logs       = WorkoutLog.query.filter_by(member_id=member.id).order_by(WorkoutLog.completed_at.desc()).limit(5).all()
     latest_measurements = BodyMeasurement.query.filter_by(member_id=member.id).order_by(BodyMeasurement.date.desc()).first()
 
+    has_subscription = member_has_active_subscription(member)
+    
     return render_template('member_dashboard.html',
                            member=member, member_workouts=member_workouts,
                            member_progress=member_progress, upcoming_classes=upcoming_classes,
                            nutrition_plan=nutrition_plan, recent_payments=recent_payments,
                            latest_payment=latest_payment, month_attendance=month_attendance,
                            available_classes=available_classes, all_trainers=all_trainers,
-                           today=today, recent_logs=recent_logs,
-                           latest_measurements=latest_measurements)
-
+                           recent_logs=recent_logs, latest_measurements=latest_measurements,
+                           has_subscription=has_subscription, today=today)
 # ═══════════════════════════════════════════════════════════════════════════════
 #  MEMBERS (Admin)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -523,7 +741,8 @@ def add_member():
         return redirect(url_for('members'))
 
     hashed   = bcrypt.generate_password_hash(password).decode('utf-8')
-    new_user = User(username=name, email=email, password_hash=hashed, role='member')
+    new_user = User(username=name, email=email, password_hash=hashed, role='member',
+                    added_by_admin=True)
     db.session.add(new_user)
     db.session.flush()
 
@@ -536,7 +755,9 @@ def add_member():
         mpesa_phone=mpesa_phone, medical_notes=medical_notes
     ))
     db.session.commit()
-    flash(f'Member {name} added!', 'success')
+    # Send welcome email with their password so they can log in
+    send_welcome_email(name, email, password=password)
+    flash(f'Member {name} added! A welcome email has been sent to {email}.', 'success')
     return redirect(url_for('members'))
 
 @app.route('/members/edit/<int:id>', methods=['GET', 'POST'])
@@ -644,6 +865,7 @@ def trainer_profiles():
 @app.route('/trainers/rate/<int:trainer_id>', methods=['POST'])
 @login_required
 @member_required
+@subscription_required
 def rate_trainer(trainer_id):
     member  = Member.query.filter_by(user_id=current_user.id).first()
     rating  = int(request.form.get('rating', 5))
@@ -734,6 +956,7 @@ def comment_workout(workout_id):
 @app.route('/my-workouts')
 @login_required
 @member_required
+@subscription_required
 def my_workouts():
     member = Member.query.filter_by(user_id=current_user.id).first()
     personal_workouts = Workout.query.filter_by(member_id=member.id, is_personal=True).all()
@@ -749,6 +972,7 @@ def my_workouts():
 @app.route('/my-workouts/add', methods=['POST'])
 @login_required
 @member_required
+@subscription_required
 def add_my_workout():
     member = Member.query.filter_by(user_id=current_user.id).first()
     db.session.add(Workout(
@@ -762,6 +986,7 @@ def add_my_workout():
 @app.route('/my-workouts/delete/<int:id>')
 @login_required
 @member_required
+@subscription_required
 def delete_my_workout(id):
     member  = Member.query.filter_by(user_id=current_user.id).first()
     workout = Workout.query.get_or_404(id)
@@ -774,6 +999,7 @@ def delete_my_workout(id):
 @app.route('/my-workouts/log', methods=['POST'])
 @login_required
 @member_required
+@subscription_required
 def log_workout():
     member = Member.query.filter_by(user_id=current_user.id).first()
     wid    = request.form.get('workout_id')
@@ -793,6 +1019,7 @@ def log_workout():
 @app.route('/my-workouts/ai-suggest')
 @login_required
 @member_required
+@subscription_required
 def ai_suggest_workouts():
     member = Member.query.filter_by(user_id=current_user.id).first()
     age    = member.age or 25
@@ -806,6 +1033,7 @@ def ai_suggest_workouts():
 @app.route('/my-workouts/ai-save', methods=['POST'])
 @login_required
 @member_required
+@subscription_required
 def save_ai_workout():
     member = Member.query.filter_by(user_id=current_user.id).first()
     db.session.add(Workout(
@@ -874,6 +1102,7 @@ def comment_nutrition(nutrition_id):
 @app.route('/my-nutrition')
 @login_required
 @member_required
+@subscription_required
 def my_nutrition():
     member = Member.query.filter_by(user_id=current_user.id).first()
     plans  = Nutrition.query.filter_by(member_id=member.id).order_by(Nutrition.date.desc()).all()
@@ -925,6 +1154,7 @@ def delete_attendance(id):
 @app.route('/my-attendance')
 @login_required
 @member_required
+@subscription_required
 def my_attendance():
     member  = Member.query.filter_by(user_id=current_user.id).first()
     records = Attendance.query.filter_by(member_id=member.id).order_by(Attendance.check_in.desc()).all()
@@ -967,7 +1197,15 @@ def add_payment():
         plan_id=int(plan_id) if plan_id else None,
         invoice_number=inv_no, status='completed'
     ))
-    db.session.commit(); flash('Payment recorded!', 'success')
+    db.session.commit()
+    # Send receipt if member has email
+    new_pay = Payment.query.order_by(Payment.id.desc()).first()
+    if new_pay:
+        pay_member = Member.query.get(member_id)
+        pay_plan   = MembershipPlan.query.get(int(plan_id)) if plan_id else None
+        if pay_member and pay_plan and pay_member.email:
+            send_subscription_receipt(pay_member, new_pay, pay_plan)
+    flash('Payment recorded! Receipt sent to member.', 'success')
     return redirect(url_for('payments'))
 
 @app.route('/payments/delete/<int:id>')
@@ -1065,6 +1303,10 @@ def stripe_webhook():
                 ))
                 member.plan_id = plan_id; member.status = 'active'
                 db.session.commit()
+                # Send receipt email
+                new_pay = Payment.query.filter_by(invoice_number=inv_no).first()
+                if new_pay and member.email:
+                    send_subscription_receipt(member, new_pay, plan)
         except Exception as e:
             print(f'Stripe webhook error: {e}')
     return '', 200
@@ -1135,6 +1377,10 @@ def mpesa_webhook():
                     invoice_number=inv_no, status='completed', external_status='completed'
                 ))
                 member.plan_id = txn.plan_id; member.status = 'active'
+                db.session.flush()
+                new_pay = Payment.query.filter_by(invoice_number=inv_no).first()
+                if new_pay and member.email:
+                    send_subscription_receipt(member, new_pay, plan)
         else:
             txn.status = 'failed'
 
@@ -1202,6 +1448,7 @@ def delete_progress(id):
 @app.route('/my-progress')
 @login_required
 @member_required
+@subscription_required
 def my_progress():
     member = Member.query.filter_by(user_id=current_user.id).first()
     records      = Progress.query.filter_by(member_id=member.id).order_by(Progress.date.desc()).all()
@@ -1211,6 +1458,7 @@ def my_progress():
 @app.route('/my-progress/add', methods=['POST'])
 @login_required
 @member_required
+@subscription_required
 def add_my_progress():
     member = Member.query.filter_by(user_id=current_user.id).first()
     weight = request.form.get('weight'); height = request.form.get('height')
@@ -1225,6 +1473,7 @@ def add_my_progress():
 @app.route('/my-measurements/add', methods=['POST'])
 @login_required
 @member_required
+@subscription_required
 def add_measurement():
     member = Member.query.filter_by(user_id=current_user.id).first()
     db.session.add(BodyMeasurement(
@@ -1284,6 +1533,7 @@ def delete_class(id):
 @app.route('/member/book-class/<int:class_id>')
 @login_required
 @member_required
+@subscription_required
 def book_class(class_id):
     member    = Member.query.filter_by(user_id=current_user.id).first()
     gym_class = Class.query.get_or_404(class_id)
@@ -1299,6 +1549,7 @@ def book_class(class_id):
 @app.route('/member/cancel-booking/<int:booking_id>')
 @login_required
 @member_required
+@subscription_required
 def cancel_booking(booking_id):
     db.session.delete(ClassBooking.query.get_or_404(booking_id)); db.session.commit()
     flash('Booking cancelled.', 'success'); return redirect(url_for('member_dashboard'))
@@ -1373,7 +1624,7 @@ def create_tables():
             db.session.add(User(username='Admin', email='admin@gym.com',
                                 password_hash=hashed, role='admin'))
             db.session.commit()
-            print('Default admin created: admin@gym.com / admin123')
+            print('Default admin created: admin@gym.com / admin123 — Kinetix Gym')
 
 if __name__ == '__main__':
     create_tables()

@@ -59,6 +59,29 @@
     </div>
 </div>
 
+<!-- Subscription Lock Banner (self-registered, unsubscribed) -->
+{% if not has_subscription and not is_admin_member %}
+<div class="sub-lock-banner">
+    <div style="width:44px;height:44px;background:rgba(245,158,11,0.2);border-radius:50%;
+                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-lock" style="color:#F59E0B;font-size:1.1rem;"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;color:#F59E0B;font-size:0.95rem;">
+            Unlock All Features
+        </div>
+        <div style="color:#8B949E;font-size:0.82rem;margin-top:2px;">
+            Subscribe to a membership plan to access Workouts, Nutrition, Progress, Attendance and more.
+        </div>
+    </div>
+    <a href="{{ url_for('my_payments') }}"
+       style="background:#F59E0B;color:#000;padding:9px 20px;border-radius:8px;
+              font-weight:800;font-size:0.82rem;text-decoration:none;white-space:nowrap;flex-shrink:0;">
+        <i class="fas fa-crown" style="margin-right:5px;"></i>Subscribe Now
+    </a>
+</div>
+{% endif %}
+
 <!-- Stats Row -->
 <div class="m-stats">
     <div class="m-stat-card blue">
@@ -82,7 +105,7 @@
         </div>
         <div class="m-stat-icon"><i class="fas fa-dumbbell"></i></div>
     </div>
-    <div class="m-stat-card purple">
+    <div class="m-stat-card purple" {% if not has_subscription %}style="opacity:0.4;"{% endif %}>
         <div>
             <div class="m-stat-label">Progress Records</div>
             <div class="m-stat-value">{{ member_progress|length }}</div>
@@ -347,7 +370,7 @@
             <div class="m-card-body">
                 <!-- Digital card -->
                 <div class="m-digital-card" style="margin-bottom:18px;">
-                    <div class="m-card-chip"><i class="fas fa-dumbbell" style="margin-right:8px;"></i>GYM SYSTEM</div>
+                    <div class="m-card-chip"><i class="fas fa-dumbbell" style="margin-right:8px;"></i>KINETIX GYM</div>
                     <div class="m-card-name">{{ member.name }}</div>
                     <div class="m-card-plan">{{ member.plan.name if member.plan else 'No Plan Selected' }}</div>
                     <div class="m-card-row">
