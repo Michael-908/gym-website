@@ -18,10 +18,9 @@ app = Flask(__name__)
 load_dotenv()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-# ── Configuration ─────────────────────────────────────────────────────────────
-app.config['SECRET_KEY']                  = 'gymapp-secret-key-2026'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'gymapp-secret-key-2026')
 
-# Get the database URL from Render, fallback to local SQLite if it doesn't exist
+# Get the database URL from Render, fallback to local SQLite if not set
 database_url = os.getenv('DATABASE_URL', 'sqlite:///gym.db')
 
 # Fix Render's legacy 'postgres://' prefix for SQLAlchemy 1.4+ compatibility
@@ -30,9 +29,10 @@ if database_url and database_url.startswith('postgres://'):
 
 app.config['SQLALCHEMY_DATABASE_URI']        = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SESSION_COOKIE_SECURE']       = False
-app.config['SESSION_COOKIE_HTTPONLY']     = True
-app.config['SESSION_COOKIE_SAMESITE']     = 'Lax'
+# Use Secure cookies on HTTPS (Render), plain cookies on local http
+app.config['SESSION_COOKIE_SECURE']   = os.getenv('DATABASE_URL') is not None
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Stripe
 app.config['STRIPE_PUBLIC_KEY']  = os.getenv('STRIPE_PUBLIC_KEY')
@@ -63,28 +63,27 @@ bcrypt = Bcrypt(app)
 mail   = Mail(app)
 
 # ── Init DB ───────────────────────────────────────────────────────────────────
-is_initialized = False
-
-@app.before_request
-def initialize_database_once():
-    global is_initialized
-    if not is_initialized:
+# Run once at startup inside an app context — safe for Gunicorn multi-workers
+# because each worker independently creates tables (CREATE TABLE IF NOT EXISTS
+# is idempotent) and the admin/plan seed checks are guarded by .first() queries.
+def initialize_database():
+    with app.app_context():
         db.create_all()
-        
-        # Seed Admin Account if missing
+
+        # Seed default admin if none exists
         if not User.query.filter_by(role='admin').first():
             hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
             db.session.add(User(
-                username='Admin', 
+                username='Admin',
                 email='admin@gym.com',
-                password_hash=hashed, 
+                password_hash=hashed,
                 role='admin',
                 added_by_admin=False
             ))
             db.session.commit()
             print('Default admin created: admin@gym.com / admin123 — Kinetix Gym')
 
-        # Seed Membership Plans if missing
+        # Seed membership plans if none exist
         if not MembershipPlan.query.first():
             db.session.add_all([
                 MembershipPlan(name='Monthly',   price=3000.0,  duration_days=30),
@@ -93,8 +92,10 @@ def initialize_database_once():
             ])
             db.session.commit()
             print('Default membership plans seeded.')
-            
-        is_initialized = True
+
+# Call immediately at module load time — works for both `gunicorn app:app`
+# and `python app.py` (local dev)
+initialize_database()
 
 # ── Login Manager ─────────────────────────────────────────────────────────────
 login_manager = LoginManager(app)
@@ -1645,25 +1646,5 @@ def page_not_found(e):
 def forbidden(e):
     return render_template('403.html'), 403
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  INIT DB + DEFAULT ADMIN
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def create_tables():
-    with app.app_context():
-        db.create_all()
-        if not User.query.filter_by(role='admin').first():
-            hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
-            db.session.add(User(username='Admin', email='admin@gym.com',
-                                password_hash=hashed, role='admin'))
-            db.session.commit()
-            print('Default admin created: admin@gym.com / admin123 — Kinetix Gym')
-
-@app.before_request
-def initialize_database_once():
-    global is_initialized
-    if not is_initialized:
-        create_tables()
-        is_initialized = True
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
