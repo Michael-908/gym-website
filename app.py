@@ -686,7 +686,7 @@ def trainer_dashboard():
     if trainer:
         today_classes = Class.query.filter(
             Class.trainer_id == trainer.id,
-            db.func.date(Class.schedule) == today
+            db.cast(Class.schedule, db.Date) == today
         ).all()
         workout_ids = [w.id for w in Workout.query.filter_by(trainer_id=trainer.id).all()]
         if workout_ids:
@@ -724,8 +724,10 @@ def member_dashboard():
     nutrition_plan   = Nutrition.query.filter_by(member_id=member.id).order_by(Nutrition.date.desc()).first()
     recent_payments  = Payment.query.filter_by(member_id=member.id).order_by(Payment.payment_date.desc()).limit(3).all()
     latest_payment   = Payment.query.filter_by(member_id=member.id).order_by(Payment.expiry_date.desc()).first()
+    # Use extract() which works on both PostgreSQL and SQLite
     month_attendance = Attendance.query.filter_by(member_id=member.id).filter(
-        db.func.strftime('%Y-%m', Attendance.date) == today.strftime('%Y-%m')
+        db.extract('year',  Attendance.date) == today.year,
+        db.extract('month', Attendance.date) == today.month
     ).count()
     available_classes = Class.query.filter(Class.schedule >= datetime.now()).order_by(Class.schedule).limit(10).all()
     all_trainers      = Trainer.query.all()
