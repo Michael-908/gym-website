@@ -1194,7 +1194,7 @@ def delete_attendance(id):
 def my_attendance():
     member  = Member.query.filter_by(user_id=current_user.id).first()
     records = Attendance.query.filter_by(member_id=member.id).order_by(Attendance.check_in.desc()).all()
-    return render_template('my_attendance.html', member=member, records=records, total=len(records))
+    return render_template('my_attendance.html', member=member, records=records, total=len(records), today=date.today())
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PAYMENTS — ADMIN
